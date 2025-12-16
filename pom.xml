@@ -38,14 +38,21 @@
         <dependency>
             <groupId>net.md-5</groupId>
             <artifactId>bungeecord-api</artifactId>
-            <version>1.20-R0.1</version>
-            <scope>provided</scope>
+            <version>1.20-R0.5-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/BungeeCord.jar</systemPath>
         </dependency>
               <dependency>
           <groupId>org.mongodb</groupId>
           <artifactId>mongodb-driver-sync</artifactId>
           <version>5.1.1</version>
       </dependency>
+    <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.10.1</version>
+        <scope>compile</scope>
+    </dependency>
     </dependencies>
 
     <build>

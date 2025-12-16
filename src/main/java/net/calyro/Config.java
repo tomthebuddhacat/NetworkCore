@@ -37,6 +37,7 @@ public class Config {
                         defaultConfig.set("key", "");
                         defaultConfig.set("database.uri", "mongodb://localhost:27017");
                         defaultConfig.set("database.name", "network_test");
+                        defaultConfig.set("agent_port", 7800);
                         ConfigurationProvider.getProvider(YamlConfiguration.class).save(defaultConfig, configFile);
                     }
                 }

@@ -1,5 +1,6 @@
 package net.calyro;
 
+import net.calyro.agent.AgentHttpServer;
 import net.calyro.authentication.premium.PremiumProvider;
 import net.calyro.commands.impl.CommandManager;
 import net.calyro.database.DatabaseManager;
@@ -37,6 +38,10 @@ public class Core extends Plugin {
 		new Encryptor();
 
 		this.premiumProvider = new PremiumProvider();
+		
+		try {
+		AgentHttpServer.start();
+		} catch (Exception e) {}
 
 		getLogger().info("NetworkCore has been enabled!");
 	}
