@@ -60,6 +60,7 @@ public class AgentHttpServer {
 				sendJson(exchange, 200, Map.of(
 							 "success", true
 						 ));
+			    System.out.println("Registered Instance '" + name + "'");
 			} catch (Exception e) {
 				sendJson(exchange, 500, Map.of(
 							 "success", false,
@@ -98,6 +99,7 @@ public class AgentHttpServer {
 				sendJson(exchange, 200, Map.of(
 							 "success", true
 						 ));
+			    System.out.println("Removed Instance '" + name + "'");
 			} catch (Exception e) {
 				sendJson(exchange, 500, Map.of(
 							 "success", false,

