@@ -216,17 +216,25 @@ public class Authentication {
 		User user = User.getUser(player.getUniqueId());
 		if (user == null) return false;
 
-		Duration sessionTime = Duration.ofSeconds(604800);
 		if (AuthDB.getPremiumUUID(user) != null) {
 			return true;
-		} else return sessionTime != null && AuthDB.getLastSessionValidation(player.getUniqueId()) != -1
-						  && LocalDateTime.ofInstant(Instant.ofEpochMilli(AuthDB.getLastSessionValidation(player.getUniqueId())), ZoneId.systemDefault()).plus(sessionTime).isAfter(LocalDateTime.now());
+		}
+		
+		return isIPAuthenticated(player);
 	}
 
 	public static void storeAuthenticatedIP(ProxiedPlayer player) {
 		UUID uuid = player.getUniqueId();
 		String ip = player.getAddress().getAddress().getHostAddress();
 		authenticatedIPs.put(uuid, ip);
+	}
+
+	public static boolean isIPAuthenticated(ProxiedPlayer player) {
+		UUID uuid = player.getUniqueId();
+		String currentIP = player.getAddress().getAddress().getHostAddress();
+		String storedIP = authenticatedIPs.get(uuid);
+
+		return storedIP != null && storedIP.equals(currentIP);
 	}
 
 	private static void cancelRegisterTask(UUID uuid) {

@@ -13,6 +13,7 @@ import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 import net.calyro.Core;
+import net.calyro.api.ControllerAPI;
 import net.calyro.authentication.AuthDB;
 import net.calyro.authentication.Authentication;
 import net.calyro.authentication.PreLoginResult;
@@ -207,11 +208,13 @@ public class AuthListener implements Listener {
         Duration sessionTime = Duration.ofSeconds(604800);
 
         if (AuthDB.getPremiumUUID(user) != null) {
+            event.setTarget(ControllerAPI.getRandomAvailableInstanceServerInfo("lobby"));
             ProxyServer.getInstance().getScheduler().schedule(Core.getInstance(), () -> {
                 player.sendMessage("§aYou have been automatically logged in as you are a premium user.");
             }, sessionTime.toMillis(), TimeUnit.MILLISECONDS);
             return true;
-        } else if (sessionTime != null && AuthDB.getLastSessionValidation(uuid) != -1 && LocalDateTime.ofInstant(Instant.ofEpochMilli(AuthDB.getLastSessionValidation(uuid)), ZoneId.systemDefault()).plus(sessionTime).isAfter(LocalDateTime.now())) {
+        } else if (Authentication.isIPAuthenticated(player)) {
+            event.setTarget(ControllerAPI.getRandomAvailableInstanceServerInfo("lobby"));
             ProxyServer.getInstance().getScheduler().schedule(Core.getInstance(), () -> {
                 player.sendMessage("§aYou have been automatically logged in as your session is still valid.");
             }, sessionTime.toMillis(), TimeUnit.MILLISECONDS);
