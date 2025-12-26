@@ -8,6 +8,7 @@ import net.md_5.bungee.api.event.AsyncEvent;
 import net.md_5.bungee.api.event.LoginEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
@@ -62,8 +63,12 @@ public class AuthListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPostLogin(PostLoginEvent event) {
-        processPostLogin(event.getPlayer());
+    public void onSeberrConnoct(ServerConnectEvent event) {
+        if (event.getReason() != ServerConnectEvent.Reason.JOIN_PROXY) {
+			return;
+		}
+		
+        processPostLogin(event);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -194,7 +199,8 @@ public class AuthListener implements Listener {
         return new PreLoginResult(PreLoginResult.PreLoginState.FORCE_OFFLINE, null, null);
     }
 
-    public static boolean processPostLogin(ProxiedPlayer player) {
+    public static boolean processPostLogin(ServerConnectEvent event) {
+        ProxiedPlayer player = event.getPlayer();
         UUID uuid = player.getUniqueId();
         User user = User.getUser(uuid);
 
@@ -212,10 +218,10 @@ public class AuthListener implements Listener {
             return true;
         } else {
             if (AuthDB.isRegistered(player.getUniqueId())) {
-                Authentication.login(player);
+                Authentication.login(event);
                 return false;
             } else {
-                Authentication.register(player);
+                Authentication.register(event);
                 return false;
             }
         }

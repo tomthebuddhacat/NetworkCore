@@ -1,6 +1,7 @@
 package net.calyro.listeners;
 
 import net.calyro.Config;
+import net.calyro.api.ControllerAPI;
 import net.calyro.api.CoreAPI;
 import net.calyro.authentication.AuthDB;
 import net.calyro.authentication.Authentication;
@@ -15,20 +16,17 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
 import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.config.ServerInfo;
-import net.md_5.bungee.api.connection.PendingConnection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.event.LoginEvent;
 import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
+import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.event.ServerConnectedEvent;
 import net.md_5.bungee.api.event.ServerSwitchEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
+import net.md_5.bungee.event.EventPriority;
 
 import org.bson.Document;
 
@@ -40,11 +38,14 @@ import java.util.concurrent.TimeUnit;
 public class PlayerListener implements Listener {
 
 	private final Map<UUID, Long> joinTimestamps = new ConcurrentHashMap<>();
-	private static ServerInfo lobby = ProxyServer.getInstance().getServerInfo("lobby-1");
 	String serverName;
 
-	@EventHandler
-	public void onPostLogin(PostLoginEvent event) {
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onServerConnect(ServerConnectEvent event) {
+		if (event.getReason() != ServerConnectEvent.Reason.JOIN_PROXY) {
+			return;
+		}
+
 		ProxiedPlayer player = event.getPlayer();
 		UUID uuid = player.getUniqueId();
 		User user = User.getUser(uuid);
@@ -90,7 +91,7 @@ public class PlayerListener implements Listener {
 			}
 		}
 
-	    if (!AuthListener.processPostLogin(player)) {
+		if (!AuthListener.processPostLogin(event)) {
 			return;
 		}
 
@@ -131,6 +132,38 @@ public class PlayerListener implements Listener {
 			}
 		}
 	}
+
+//	@EventHandler(priority = EventPriority.HIGHEST)
+//	public void onServerConnect(ServerConnectEvent event) {
+
+//		if (event.getReason() != ServerConnectEvent.Reason.JOIN_PROXY) {
+//			return;
+//		}
+
+//		List<AvailableInstance> instances = ControllerAPI.getAvailableInstances("hub");
+//		AvailableInstance instance = InstanceSelector.pickRandomJoinable(instances);
+
+//		if (instance == null) {
+//			event.setCancelled(true);
+//			event.getPlayer().disconnect(
+//				"§cNo hub servers are currently available.\n§cReason: Instance not found"
+//			);
+//			return;
+//		}
+
+//		ServerInfo serverInfo =
+//			ProxyServer.getInstance().getServerInfo(instance.getName());
+
+//		if (serverInfo == null) {
+//			event.setCancelled(true);
+//			event.getPlayer().disconnect(
+//				"§cNo hub servers are currently available.\n§cReason: Server info not found"
+//			);
+//			return;
+//		}
+
+//		event.setTarget(serverInfo);
+//	}
 
 	@EventHandler
 	public void onServerConnected(ServerConnectedEvent event) {

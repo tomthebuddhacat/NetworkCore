@@ -41,8 +41,9 @@ public class Core extends Plugin {
 		
 		try {
 		AgentHttpServer.start();
+		getLogger().info("Started HTTP Server");
 		} catch (Exception e) {}
-
+		
 		getLogger().info("NetworkCore has been enabled!");
 	}
 
