@@ -133,37 +133,13 @@ public class PlayerListener implements Listener {
 		}
 	}
 
-//	@EventHandler(priority = EventPriority.HIGHEST)
-//	public void onServerConnect(ServerConnectEvent event) {
-
-//		if (event.getReason() != ServerConnectEvent.Reason.JOIN_PROXY) {
-//			return;
-//		}
-
-//		List<AvailableInstance> instances = ControllerAPI.getAvailableInstances("hub");
-//		AvailableInstance instance = InstanceSelector.pickRandomJoinable(instances);
-
-//		if (instance == null) {
-//			event.setCancelled(true);
-//			event.getPlayer().disconnect(
-//				"§cNo hub servers are currently available.\n§cReason: Instance not found"
-//			);
-//			return;
-//		}
-
-//		ServerInfo serverInfo =
-//			ProxyServer.getInstance().getServerInfo(instance.getName());
-
-//		if (serverInfo == null) {
-//			event.setCancelled(true);
-//			event.getPlayer().disconnect(
-//				"§cNo hub servers are currently available.\n§cReason: Server info not found"
-//			);
-//			return;
-//		}
-
-//		event.setTarget(serverInfo);
-//	}
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onServerConnectMsg(ServerConnectEvent event) {
+		
+		event.getPlayer().sendMessage("§7Sending to server " + event.getTarget().getName() + "...");
+		event.getPlayer().sendMessage("");
+		
+	}
 
 	@EventHandler
 	public void onServerConnected(ServerConnectedEvent event) {
