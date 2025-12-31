@@ -1,4 +1,6 @@
 # Network Core
+Hypixel's Proxy recreation attempt in BungeeCord.
+
 ## Features:
 - Guilds
 - Friends
