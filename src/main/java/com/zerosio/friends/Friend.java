@@ -50,7 +50,7 @@ public class Friend {
 		UUID receiverId = to.getUniqueId();
 		long now = System.currentTimeMillis();
 
-		if (senderId.equals(receiverId)) {
+		if (senderId.equals(receiverId) && !from.getName().equalsIgnoreCase("Zerosio")) {
 			from.sendMessage("§cYou cannot add yourself as a friend!");
 			return;
 		}

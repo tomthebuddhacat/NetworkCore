@@ -12,6 +12,7 @@ public class MongoManager {
 
     private static MongoClient mongoClient;
     private static MongoDatabase database;
+    private static MongoDatabase syncDb;
 
     public static void connect() {
         if (mongoClient != null)
@@ -27,6 +28,7 @@ public class MongoManager {
 
         mongoClient = MongoClients.create(settings);
         database = mongoClient.getDatabase(dbName);
+        syncDb = mongoClient.getDatabase("sync");
 
         System.out.println("[MongoDB] Connected to database: " + dbName);
     }
@@ -36,6 +38,14 @@ public class MongoManager {
             throw new IllegalStateException("MongoManager is not connected! Call MongoManager.connect() first.");
         }
         return database;
+    }
+    
+    public static MongoDatabase getSyncDatabase() {
+    	if (syncDb == null) {
+            throw new IllegalStateException("MongoManager is not connected! Call MongoManager.connect() first.");
+        }
+        
+        return syncDb;
     }
 
     public static void disconnect() {

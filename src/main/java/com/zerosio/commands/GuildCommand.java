@@ -280,6 +280,8 @@ public class GuildCommand extends CommandBase {
 							p.sendMessage(getDividerAqua());
 							p.sendMessage(player.getName() + " §edisbanded the guild.");
 							p.sendMessage(getDividerAqua());
+							
+							User.getUser(p.getUniqueId()).setGuild("none");
 						});
 
 						GuildDatabase.collection.deleteOne(Filters.eq("_id", Guild.getGuildFromPlayer(player).getUuid().toString()));
@@ -423,6 +425,7 @@ public class GuildCommand extends CommandBase {
 					} else {
 						Guild guild = Guild.getGuildFromPlayer(player);
 						guild.left(player.getUniqueId().toString());
+						User.getUser(player.getUniqueId()).setGuild("none");
 
 						player.sendMessage(getDividerAqua());
 						player.sendMessage("§eYou left the guild");
@@ -798,6 +801,7 @@ public class GuildCommand extends CommandBase {
 						ArrayList<String> members = guild.getMembers();
 						members.add(requester.getUniqueId().toString());
 						guild.setMembers(members);
+						User.getUser(player.getUniqueId()).setGuild(guild.getDatabase().getId());
 
 						guild.getOnlinePlayers().forEach(online -> {
 							online.sendMessage(getDividerAqua());
@@ -1084,7 +1088,8 @@ public class GuildCommand extends CommandBase {
 								player.sendMessage(getDividerAqua());
 								player.sendMessage("§aYou created the §6" + args[1] + " §aguild!");
 								player.sendMessage(getDividerAqua());
-								new Guild(UUID.randomUUID(), player.getUniqueId().toString(), args[1]);
+								Guild gh = new Guild(UUID.randomUUID(), player.getUniqueId().toString(), args[1]);
+								User.getUser(player.getUniqueId()).setGuild(gh.getDatabase().getId());
 							} else {
 								player.sendMessage(getDividerAqua());
 								player.sendMessage("§cGuild name must be alphanumeric!");
@@ -1281,6 +1286,7 @@ public class GuildCommand extends CommandBase {
 									if (members.contains(target)) {
 										members.remove(target);
 										Guild.getGuildFromPlayer(player).setMembers(members);
+										User.getUser(player.getUniqueId()).setGuild("none");
 
 										ProxyServer.getInstance().getPlayer(args[1]).sendMessage(getDividerAqua());
 										ProxyServer.getInstance().getPlayer(args[1]).sendMessage("§cYou have been kicked from §6" + Guild.getGuildFromPlayer(player).getName() + "§c!");

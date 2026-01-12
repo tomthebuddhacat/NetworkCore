@@ -91,11 +91,16 @@ public class Authentication {
 
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
 			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			User friendUser = User.getUser(friendId);
 			if (friend != null && friend.isConnected()) {
-				User friendUser = User.getUser(friendId);
+				
 				if (friendUser.getBoolean("friend.join_leave_msg")) {
 					friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §ejoined.");
 				}
+			}
+			
+			if (friend != null) {
+				friendUser.incrementFCount();
 			}
 		}
 
@@ -118,6 +123,8 @@ public class Authentication {
 					poop.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §ejoined.");
 				}
 			}
+			
+			guild.getDatabase().incrementOnline();
 		}
 	}
 
@@ -182,11 +189,15 @@ public class Authentication {
 
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
 			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			User friendUser = User.getUser(friendId);
 			if (friend != null && friend.isConnected()) {
-				User friendUser = User.getUser(friendId);
 				if (friendUser.getBoolean("friend.join_leave_msg")) {
 					friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §ejoined.");
 				}
+			}
+			
+			if (friend != null) {
+				friendUser.incrementFCount();
 			}
 		}
 
@@ -209,6 +220,8 @@ public class Authentication {
 					poop.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §ejoined.");
 				}
 			}
+			
+			guild.getDatabase().incrementOnline();
 		}
 	}
 

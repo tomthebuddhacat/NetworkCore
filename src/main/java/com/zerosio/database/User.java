@@ -36,7 +36,6 @@ public class User {
 	public static void loadConfig() {
 		MONGO_URI = Config.getString("database.uri", "mongodb://localhost:27017");
 		MONGO_DB = Config.getString("database.name", "network_test");
-		System.out.println("[MongoDB] Loaded config - URI: " + MONGO_URI + ", DB: " + MONGO_DB);
 	}
 
 	public User(String username, UUID premiumUUID) {
@@ -76,8 +75,8 @@ public class User {
 		try {
 			ConnectionString connString = new ConnectionString(MONGO_URI);
 			MongoClientSettings settings = MongoClientSettings.builder()
-					.applyConnectionString(connString)
-					.build();
+										   .applyConnectionString(connString)
+										   .build();
 
 			mongoClient = MongoClients.create(settings);
 			MongoDatabase database = mongoClient.getDatabase(MONGO_DB);
@@ -122,30 +121,58 @@ public class User {
 		data.put("new_package_rank", Rank.DEFAULT.name());
 		data.put("monthly_rank", Rank.DEFAULT.name());
 		data.put("monthly_rank_bought_time", -1L);
+		data.put("ascent_level", 1);
+		data.put("gold", 0);
+		data.put("mystery_dust", 0);
+		data.put("guild", "none");
+		data.put("flying", false);
+		data.put("players_hidden", false);
 		data.put("authentication", new Document()
-				.append("isPremium", false)
-				.append("lastSessionValidation", -1L)
-				.append("premiumUuid", null)
-	          	.append("password", "temp")
-	          	.append("isRegistered", false)
-	          	.append("registeredAt", Instant.now()));
+				 .append("isPremium", false)
+				 .append("lastSessionValidation", -1L)
+				 .append("premiumUuid", null)
+				 .append("password", "temp")
+				 .append("isRegistered", false)
+				 .append("registeredAt", Instant.now()));
 		data.put("debug_mode", false);
 		data.put("active_chat", ChatModes.PUBLIC.name());
 		data.put("currently_messaging", "nobody");
+		data.put("ignores", new ArrayList<String>());
 		data.put("friend", new Document()
-				.append("join_leave_msg", true)
-				.append("friends", new ArrayList<String>())
-				.append("best_friends", new ArrayList<String>())
-				.append("blocked_users", new ArrayList<String>()));
+				 .append("join_leave_msg", true)
+				 .append("friends_online", 0)
+				 .append("friends", new ArrayList<String>())
+				 .append("best_friends", new ArrayList<String>()));
 	}
 
 	public static User getByPremiumUUID(UUID premiumUUID) {
 		return collection.find(Filters.eq("authentication.premiumUuid", premiumUUID.toString()))
-				.map(doc -> {
-					UUID uuid = UUID.fromString(doc.getString("uuid"));
-					return userCache.computeIfAbsent(uuid, User::new);
-				})
-				.first();
+		.map(doc -> {
+			UUID uuid = UUID.fromString(doc.getString("uuid"));
+			return userCache.computeIfAbsent(uuid, User::new);
+		})
+		.first();
+	}
+
+	public void setGuild(String guildId) {
+		setData("guild", guildId);
+	}
+
+	public Boolean isInGuild() {
+		Boolean b = false;
+		String str = getString("guild");
+
+		if (!str.equalsIgnoreCase("none")) return true;
+
+		return b;
+	}
+
+	public String getGuildId() {
+		return getString("guild");
+	}
+
+	public Boolean isFlying() {
+		return getBoolean("flying");
 	}
 
 	public static boolean existsUserInDatabase(UUID uuid) {
@@ -163,8 +190,8 @@ public class User {
 
 	public static User getUser(String username, UUID premiumUUID) {
 		UUID uuid = premiumUUID != null
-				? premiumUUID
-				: UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
+					? premiumUUID
+					: UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
 
 		return userCache.computeIfAbsent(uuid, key -> new User(username, premiumUUID));
 	}
@@ -172,9 +199,9 @@ public class User {
 
 	public static User getUser(String name) {
 		return userCache.values().stream()
-				.filter(user -> user.getString("last_known_name").equalsIgnoreCase(name))
-				.findFirst()
-				.orElse(null);
+			   .filter(user -> user.getString("last_known_name").equalsIgnoreCase(name))
+			   .findFirst()
+			   .orElse(null);
 	}
 
 	public void setData(String key, Object value) {
@@ -223,9 +250,9 @@ public class User {
 	public void save() {
 		try {
 			collection.replaceOne(
-					Filters.eq("uuid", uuid.toString()),
-					data,
-					new ReplaceOptions().upsert(true));
+				Filters.eq("uuid", uuid.toString()),
+				data,
+				new ReplaceOptions().upsert(true));
 		} catch (Exception e) {
 			System.err.println("[MongoDB] Error saving user data for " + uuid + ": " + e.getMessage());
 		}
@@ -233,8 +260,8 @@ public class User {
 
 	public void saveAsync() {
 		ProxyServer.getInstance().getScheduler().runAsync(
-				ProxyServer.getInstance().getPluginManager().getPlugin("NetworkCore"),
-				this::save);
+			ProxyServer.getInstance().getPluginManager().getPlugin("NetworkCore"),
+			this::save);
 	}
 
 	public static void saveAll() {
@@ -262,7 +289,7 @@ public class User {
 		long currentTime = System.currentTimeMillis();
 		Object monthlyBoughtTimeObj = data.get("monthly_rank_bought_time");
 		long monthlyBoughtTime = monthlyBoughtTimeObj instanceof Number ? ((Number) monthlyBoughtTimeObj).longValue()
-				: -1L;
+								 : -1L;
 
 		if (monthlyRank != null && monthlyBoughtTime > 0 &&
 				(currentTime - monthlyBoughtTime <= 2592000000L)) {
@@ -308,20 +335,45 @@ public class User {
 	public static Collection<User> getAllUsers() {
 		return userCache.values();
 	}
-	
+
 	public ChatModes getChatMode() {
 		return ChatModes.valueOf(getString("active_chat"));
 	}
-	
+
 	public void setChatMode(ChatModes chatMode) {
 		setData("active_chat", chatMode.name());
 	}
-	
+
 	public String getCurrentlyMessaging() {
 		return getString("currently_messaging");
 	}
-	
+
 	public void setCurrentlyMessaging(String username) {
 		setData("currently_messaging", username);
+	}
+
+	public Document getFriendDoc() {
+		return (Document) data.get("friend");
+	}
+
+	public void incrementFCount() {
+		Document friendDoc = getFriendDoc();
+		int currentCount = friendDoc.getInteger("friends_online", 0);
+		friendDoc.put("friends_online", currentCount + 1);
+		setData("friend", friendDoc);
+	}
+
+	public void decrementFCount() {
+		Document friendDoc = getFriendDoc();
+		int currentCount = friendDoc.getInteger("friends_online", 0);
+		// Ensure count doesn't go below 0
+		int newCount = Math.max(0, currentCount - 1);
+		friendDoc.put("friends_online", newCount);
+		setData("friend", friendDoc);
+	}
+
+	public int getFriendsOnlineCount() {
+		Document friendDoc = getFriendDoc();
+		return friendDoc.getInteger("friends_online", 0);
 	}
 }

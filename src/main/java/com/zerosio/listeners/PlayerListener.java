@@ -104,11 +104,15 @@ public class PlayerListener implements Listener {
 		// Notify friends
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
 			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			User friendUser = User.getUser(friendId);
 			if (friend != null && friend.isConnected()) {
-				User friendUser = User.getUser(friendId);
 				if (friendUser.getBoolean("friend.join_leave_msg")) {
 					friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §ejoined.");
 				}
+			}
+			
+			if (friend != null) {
+				friendUser.incrementFCount();
 			}
 		}
 
@@ -130,6 +134,8 @@ public class PlayerListener implements Listener {
 					poop.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §ejoined.");
 				}
 			}
+			
+			guild.getDatabase().incrementOnline();
 		}
 	}
 
@@ -158,6 +164,7 @@ public class PlayerListener implements Listener {
 		ProxiedPlayer player = event.getPlayer();
 		UUID uuid = player.getUniqueId();
 		Guild guild = Guild.getGuildFromPlayer(player);
+		User user = User.getUser(uuid);
 
 		joinTimestamps.remove(uuid);
 
@@ -165,12 +172,17 @@ public class PlayerListener implements Listener {
 			return;
 		}
 
-		User.getUser(player.getUniqueId()).setData("last_logout", System.currentTimeMillis());
+		user.setData("last_logout", System.currentTimeMillis());
 
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
 			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			User friendUser = User.getUser(friendId);
 			if (friend != null && friend.isConnected() && User.getUser(friendId).getBoolean("friend.join_leave_msg")) {
 				friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §eleft.");
+			}
+			
+			if (friend != null) {
+				friendUser.decrementFCount();
 			}
 		}
 
@@ -192,6 +204,8 @@ public class PlayerListener implements Listener {
 					popo.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §eleft.");
 				}
 			}
+			
+			guild.getDatabase().decrementOnline();
 		}
 	}
 

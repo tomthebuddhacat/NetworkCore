@@ -31,7 +31,7 @@ public class MotdListener implements Listener {
 
         if (maintenance) {
             String line1 = ChatColor.translateAlternateColorCodes('&',
-                    "              &aCalyro Network &c[1.8-1.20]");
+                    "              &aAscent Network &c[1.8-1.20]");
             String line2 = ChatColor.translateAlternateColorCodes('&',
                     "   &cThe network is currently undergoing maintenance.");
             ping.setDescription(line1 + "\n" + line2);
@@ -39,7 +39,7 @@ public class MotdListener implements Listener {
             ping.setVersion(new ServerPing.Protocol("§cMaintenance", -1));
         } else {
             String line1 = ChatColor.translateAlternateColorCodes('&',
-                    "&r&r                 &aCalyro Network &c[1.8-1.20]&r&r");
+                    "&r&r                 &aAscent Network &c[1.8-1.20]&r&r");
             String line2 = ChatColor.translateAlternateColorCodes('&',
                     "&r&r                      &2&lRELEASE");
             ping.setDescription(line1 + "\n" + line2);

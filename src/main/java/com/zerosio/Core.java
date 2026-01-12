@@ -7,6 +7,7 @@ import com.zerosio.database.DatabaseManager;
 import com.zerosio.database.MongoManager;
 import com.zerosio.database.User;
 import com.zerosio.guilds.Guild;
+import com.zerosio.guilds.database.GuildDatabase;
 import com.zerosio.listeners.AuthListener;
 import com.zerosio.listeners.ChatListener;
 import com.zerosio.listeners.MotdListener;
@@ -30,6 +31,7 @@ public class Core extends Plugin {
 		MongoManager.connect();
 		DatabaseManager.init();
 		Guild.register();
+		GuildDatabase.ensureCollectionn();
 
 		motdListener = new MotdListener(this);
 
@@ -43,6 +45,8 @@ public class Core extends Plugin {
 		AgentHttpServer.start();
 		getLogger().info("Started HTTP Server");
 		} catch (Exception e) {}
+		
+		GuildDatabase.resetAllOnlineCounts();
 		
 		getLogger().info("NetworkCore has been enabled!");
 	}
