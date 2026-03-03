@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.zerosio</groupId>
-    <artifactId>Network</artifactId>
-    <version>Core</version>
+    <artifactId>network-core</artifactId>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
+
+    <name>Network-Core</name>
+    <description>BungeeCord Core for Astryx Network</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,76 +21,100 @@
     </properties>
 
     <repositories>
-    <repository>
-        <id>central</id>
-        <url>https://repo.maven.apache.org/maven2</url>
-    </repository>
-        <repository>
-            <id>md-5-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </repository>
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+
+        <repository>
+            <id>md-5-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
+
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
-        <repository>
-            <id>songoda</id>
-            <url>https://repo.songoda.com/repository/public</url>
-        </repository>
     </repositories>
 
     <dependencies>
+
+        <!-- BungeeCord API (Provided by proxy) -->
         <dependency>
             <groupId>net.md-5</groupId>
             <artifactId>bungeecord-api</artifactId>
             <version>1.20-R0.5-SNAPSHOT</version>
-            <scope>system</scope>
-            <systemPath>${basedir}/BungeeCord.jar</systemPath>
+            <scope>provided</scope>
         </dependency>
-    <dependency>
-          <groupId>org.mongodb</groupId>
-          <artifactId>mongodb-driver-sync</artifactId>
-          <version>5.1.1</version>
-      </dependency>
-    <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.10.1</version>
-        <scope>compile</scope>
-    </dependency>
+
+        <!-- MongoDB Driver -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>5.1.1</version>
+        </dependency>
+
+        <!-- Gson -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
+        <finalName>Network-Core</finalName>
+
         <plugins>
+
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+            </plugin>
+
+            <!-- Shade Plugin (Very Important for MongoDB) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.5.0</version>
+
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+
+                        <configuration>
+
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.mongodb</pattern>
+                                    <shadedPattern>com.zerosio.network.libs.mongodb</shadedPattern>
+                                </relocation>
+
+                                <relocation>
+                                    <pattern>org.bson</pattern>
+                                    <shadedPattern>com.zerosio.network.libs.bson</shadedPattern>
+                                </relocation>
+
+                                <relocation>
+                                    <pattern>com.google.gson</pattern>
+                                    <shadedPattern>com.zerosio.network.libs.gson</shadedPattern>
+                                </relocation>
+                            </relocations>
+
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>net.azora.pvp.Core</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
+
         </plugins>
     </build>
+
 </project>
