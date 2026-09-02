@@ -1,10 +1,11 @@
 package com.zerosio.commands.impl;
 
+import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Messages;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
 
 import java.util.List;
 
@@ -20,21 +21,22 @@ public abstract class CommandBase {
 
     public abstract String getUsage();
 
-    public abstract void execute(ProxiedPlayer sender, String[] args);
+    public abstract void execute(Player player, String[] args);
 
-    public void executeCommand(CommandSender sender, String[] args) {
-        if (!consoleCommand() && !(sender instanceof ProxiedPlayer)) {
-            sender.sendMessage(new TextComponent("§cOnly players can use this command."));
+    public void executeCommand(CommandSource commandSource, String[] args) {
+        if (!consoleCommand() && !(commandSource instanceof Player)) {
+            commandSource.sendMessage(Messages.get("only-players-can-execute"));
             return;
         }
 
-        ProxiedPlayer player = sender instanceof ProxiedPlayer ? (ProxiedPlayer) sender : null;
+        Player player = commandSource instanceof Player ? (Player) commandSource : null;
 
         if (!consoleCommand() && player != null) {
             Rank rank = getPlayerRank(player);
             if (!rank.isAboveOrEqual(getRequiredRank())) {
-                player.sendMessage(new TextComponent(
-                        "§cYou need " + getRequiredRank().getPrefixColoured() + "§c or higher to use this command."));
+                player.sendMessage(Messages.get("must-have-required-rank-or-higher").replaceText(builder -> builder
+                        .match("%requiredRank%")
+                        .replacement(Component.text(getRequiredRank().getPrefixColoured()))));
                 return;
             }
         }
@@ -49,7 +51,7 @@ public abstract class CommandBase {
         execute(player, args);
     }
 
-    private Rank getPlayerRank(ProxiedPlayer player) {
+    private Rank getPlayerRank(Player player) {
         return CoreAPI.getPlayerRank(player.getUniqueId());
     }
 

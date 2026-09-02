@@ -1,8 +1,8 @@
 package com.zerosio.commands.impl;
 
+import com.velocitypowered.api.command.SimpleCommand;
 import com.zerosio.Core;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.plugin.Command;
+import org.slf4j.Logger;
 
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +10,12 @@ import java.util.List;
 public class CommandManager {
 
     private static final String COMMAND_PACKAGE = "com.zerosio.commands";
+
+    private static Logger logger;
+
+    public CommandManager(Logger logger) {
+        CommandManager.logger = logger;
+    }
 
     public static void registerCommands(Core plugin) {
         int registered = 0;
@@ -20,12 +26,12 @@ public class CommandManager {
                 register(plugin, commandBase);
                 registered++;
             } catch (Exception e) {
-                plugin.getLogger().warning("§cFailed to register command: " + clazz.getSimpleName());
+                logger.warn("Failed to register command: " + clazz.getSimpleName());
                 e.printStackTrace();
             }
         }
 
-        plugin.getLogger().info("§aSuccessfully registered " + registered + " commands.");
+        logger.info("§aSuccessfully registered " + registered + " commands.");
     }
 
     private static void register(Core plugin, CommandBase commandBase) {
@@ -34,13 +40,10 @@ public class CommandManager {
             aliases = Collections.emptyList();
         }
 
-        Command command = new Command(commandBase.getName(), null,
-                aliases.toArray(new String[0])) {
-            @Override
-            public void execute(CommandSender sender, String[] args) {
-                commandBase.executeCommand(sender, args);
-            }
-        };
-        plugin.getProxy().getPluginManager().registerCommand(plugin, command);
+        SimpleCommand simpleCommand = invocation -> commandBase.executeCommand(invocation.source(), invocation.arguments());
+
+        plugin.getProxy().getCommandManager().register(plugin.getProxy().getCommandManager().metaBuilder(commandBase.getName())
+                .aliases(aliases.toArray(new String[0]))
+                .build(), simpleCommand);
     }
 }

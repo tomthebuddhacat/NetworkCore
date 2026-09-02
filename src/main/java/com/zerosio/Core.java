@@ -113,5 +113,9 @@ public class Core {
 	public Path getDataDirectory() {
 		return dataDirectory;
 	}
+
+	public ProxyServer getProxy() {
+		return proxyServer;
+	}
 }
 

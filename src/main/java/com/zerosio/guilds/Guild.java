@@ -1,17 +1,15 @@
 package com.zerosio.guilds;
 
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.zerosio.Core;
+import com.zerosio.Messages;
 import com.zerosio.guilds.database.GuildDatabase;
 import com.zerosio.guilds.other.Color;
 
 import org.bson.Document;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class Guild {
 	public static final Map<UUID, Guild> GUILD_CACHE = new HashMap<>();
@@ -114,7 +112,7 @@ public class Guild {
 		return null;
 	}
 
-	public static boolean inGuild(ProxiedPlayer player) {
+	public static boolean inGuild(Player player) {
 		try {
 			for (Guild guild : GUILD_CACHE.values()) {
 				if (guild.getAllPlayers().contains(player.getUniqueId().toString())) return true;
@@ -124,18 +122,29 @@ public class Guild {
 		return false;
 	}
 
-	public static Guild getGuildFromPlayer(ProxiedPlayer player) {
+	public static Guild getGuildFromPlayer(Player player) {
 		for (Guild guild : GUILD_CACHE.values()) {
 			if (guild.getAllPlayers().contains(player.getUniqueId().toString())) return guild;
 		}
 		return null;
 	}
 
-	public ArrayList<ProxiedPlayer> getOnlinePlayers() {
-		ArrayList<ProxiedPlayer> players = new ArrayList<>();
+	public ArrayList<Player> getOnlinePlayers() {
+		ArrayList<Player> players = new ArrayList<>();
+		/*
+		You can do this in two ways:
 		for (String player : getAllPlayers()) {
-			ProxiedPlayer p = ProxyServer.getInstance().getPlayer(UUID.fromString(player));
-			if (p != null) players.add(p);
+			Optional<Player> p = Core.getInstance().getProxy().getPlayer(UUID.fromString(player));
+			if (p.isPresent()) {
+				players.add(p.get());
+			}
+		}
+		 */
+		for (String player : getAllPlayers()) {
+			Player p = Core.getInstance().getProxy().getPlayer(UUID.fromString(player)).orElse(null);
+			if (p != null) {
+				players.add(p);
+			}
 		}
 		return players;
 	}
@@ -164,15 +173,19 @@ public class Guild {
 		}
 	}
 
-	public ArrayList<ProxiedPlayer> getOnlinePlayersExceptLeader() {
-		ArrayList<ProxiedPlayer> players = new ArrayList<>();
+	public ArrayList<Player> getOnlinePlayersExceptLeader() {
+		ArrayList<Player> players = new ArrayList<>();
 		for (String player : members) {
-			ProxiedPlayer p = ProxyServer.getInstance().getPlayer(UUID.fromString(player));
-			if (p != null) players.add(p);
+			Player p = Core.getInstance().getProxy().getPlayer(UUID.fromString(player)).orElse(null);
+			if (p != null) {
+				players.add(p);
+			}
 		}
 		for (String player : officer) {
-			ProxiedPlayer p = ProxyServer.getInstance().getPlayer(UUID.fromString(player));
-			if (p != null) players.add(p);
+			Player p = Core.getInstance().getProxy().getPlayer(UUID.fromString(player)).orElse(null);
+			if (p != null) {
+				players.add(p);
+			}
 		}
 		return players;
 	}
@@ -185,15 +198,15 @@ public class Guild {
 		return players;
 	}
 
-	public boolean isLeader(ProxiedPlayer player) {
+	public boolean isLeader(Player player) {
 		return player.getUniqueId().toString().equals(leader);
 	}
 
-	public boolean isOfficer(ProxiedPlayer player) {
+	public boolean isOfficer(Player player) {
 		return officer.contains(player.getUniqueId().toString());
 	}
 
-	public boolean isMember(ProxiedPlayer player) {
+	public boolean isMember(Player player) {
 		return members.contains(player.getUniqueId().toString());
 	}
 
@@ -244,14 +257,14 @@ public class Guild {
 		database.set("experience", toSet);
 	}
 
-	public void addExperience(ProxiedPlayer player, long toAdd) {
-		if (Level.getLevelFromXP(experience + toAdd) > Level.getLevelFromXP(experience)) {
-			getAllPlayers().forEach(member -> {
-				ProxiedPlayer p = ProxyServer.getInstance().getPlayer(UUID.fromString(member));
+	public void addExperience(Player player, long toAdd) {
+		if (Level.getLevelFromXP(experience + toAdd) > Level.getLevelFromXP(experience)){
+			getAllPlayers().forEach(members -> {
+				Player p = Core.getInstance().getProxy().getPlayer(UUID.fromString(members)).orElse(null);
 				if (p != null) {
-					p.sendMessage("§b§m-----------------------------------------------------");
-					p.sendMessage("§eYour guild has just reached §6Level " + Level.getLevelFromXP(experience + toAdd) + "§e!");
-					p.sendMessage("§b§m-----------------------------------------------------");
+					p.sendMessage(Messages.get("guild-level-up-header"));
+					p.sendMessage(Messages.get("guild-level-up-message", Collections.singletonMap("guildLevel", String.valueOf(Level.getLevelFromXP(experience + toAdd)))));
+					p.sendMessage(Messages.get("guild-level-up-bottom-header"));
 				}
 			});
 		}
@@ -343,8 +356,7 @@ public class Guild {
 
 
 	public static void register() {
-		Core.getInstance().getProxy().registerChannel("guilds:tag");
-
+		Core.getInstance().getProxy().getChannelRegistrar().register(MinecraftChannelIdentifier.create("guilds", "tag"));
 		new GuildDatabase();
 
 		new Thread(() -> {
