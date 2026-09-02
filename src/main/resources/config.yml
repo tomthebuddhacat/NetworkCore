@@ -1,5 +1,0 @@
-maintenance: false
-key: "" # Should be exactly 16 Chars or it'll return error gng
-database:
-  uri: "mongodb://localhost:27017"
-  name: "network_test"

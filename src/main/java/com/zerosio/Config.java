@@ -1,88 +1,102 @@
 package com.zerosio;
 
-import net.md_5.bungee.config.Configuration;
-import net.md_5.bungee.config.ConfigurationProvider;
-import net.md_5.bungee.config.YamlConfiguration;
+import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.ConfigurateException;
+import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
+import org.spongepowered.configurate.loader.ConfigurationLoader;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class Config {
 
-    private static File configFile;
-    private static Configuration config;
+    private static Path filePath;
 
-    static {
+    private static ConfigurationLoader<CommentedConfigurationNode> configurationLoader;
+
+    private static CommentedConfigurationNode commentedConfigurationNode;
+
+    private Config() {}
+
+    public static void init() {
         try {
-            configFile = new File(Core.getInstance().getDataFolder(), "config.yml");
+            Path dataDirectory = Core.getInstance().getDataDirectory();
 
-            if (!Core.getInstance().getDataFolder().exists()) {
-                Core.getInstance().getDataFolder().mkdirs();
+            Files.createDirectories(dataDirectory);
+
+            filePath = dataDirectory.resolve("config.conf");
+
+            configurationLoader = HoconConfigurationLoader.builder().path(filePath).build();
+
+            if (Files.notExists(filePath)) {
+                createDefaultConfig();
             }
 
-            if (!configFile.exists()) {
-                try (InputStream in = Core.getInstance().getResourceAsStream("config.yml");
-                        FileOutputStream out = new FileOutputStream(configFile)) {
-                    if (in != null) {
-                        byte[] buf = new byte[1024];
-                        int len;
-                        while ((len = in.read(buf)) > 0) {
-                            out.write(buf, 0, len);
-                        }
-                    } else {
-                        Configuration defaultConfig = new Configuration();
-                        defaultConfig.set("maintenance", false);
-                        defaultConfig.set("key", "");
-                        defaultConfig.set("database.uri", "mongodb://localhost:27017");
-                        defaultConfig.set("database.name", "network_test");
-                        ConfigurationProvider.getProvider(YamlConfiguration.class).save(defaultConfig, configFile);
-                    }
-                }
-            }
-
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+            commentedConfigurationNode = configurationLoader.load();
+        } catch (IOException ioException) {
+            throw new RuntimeException("Failed to initialize configuration", ioException);
         }
+    }
+
+    private static void createDefaultConfig() throws IOException {
+        CommentedConfigurationNode configurationNode = configurationLoader.createNode();
+
+        configurationNode.node("maintenance").set(false);
+        configurationNode.node("key").set("");
+
+        configurationNode.node("database", "uri").set("mongodb://localhost:27017");
+        configurationNode.node("database", "name").set("Testing Database");
+
+        configurationLoader.save(configurationNode);
     }
 
     public static Object get(String path) {
-        return config.get(path);
+        return node(path).raw();
     }
 
     public static String getString(String path, String def) {
-        Object value = config.get(path);
-        return value != null ? value.toString() : def;
+        return node(path).getString(def);
     }
 
     public static boolean getBoolean(String path, boolean def) {
-        Object value = config.get(path);
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        }
-        return def;
+        return node(path).getBoolean(def);
     }
 
     public static void set(String path, Object value) {
-        config.set(path, value);
-        save();
+        try {
+            node(path).set(value);
+            save();
+        } catch (ConfigurateException configurateException) {
+            throw new RuntimeException("Failed to set config value: " + path, configurateException);
+        }
     }
 
     public static void reload() {
         try {
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+            commentedConfigurationNode = configurationLoader.load();
+        } catch (IOException ioException) {
+            throw new RuntimeException("Failed to reload configuration", ioException);
         }
     }
 
     public static void save() {
         try {
-            ConfigurationProvider.getProvider(YamlConfiguration.class).save(config, configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+            configurationLoader.save(commentedConfigurationNode);
+        } catch (IOException ioException) {
+            throw new RuntimeException("Failed to save configuration", ioException);
         }
+    }
+
+    public static CommentedConfigurationNode node(String path) {
+        String[] part = path.split("\\.");
+
+        CommentedConfigurationNode node = commentedConfigurationNode;
+
+        for (String parts : part) {
+            node = node.node(parts);
+        }
+
+        return node;
     }
 }

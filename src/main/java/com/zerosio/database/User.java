@@ -35,7 +35,7 @@ public class User {
 
 	public static void loadConfig() {
 		MONGO_URI = Config.getString("database.uri", "mongodb://localhost:27017");
-		MONGO_DB = Config.getString("database.name", "network_test");
+		MONGO_DB = Config.getString("database.name", "Test Database");
 	}
 
 	public User(String username, UUID premiumUUID) {

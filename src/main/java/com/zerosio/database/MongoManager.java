@@ -19,7 +19,7 @@ public class MongoManager {
             return;
 
         String mongoUri = Config.getString("database.uri", "mongodb://localhost:27017");
-        String dbName = Config.getString("database.name", "network_test");
+        String dbName = Config.getString("database.name", "Test Database");
 
         ConnectionString connString = new ConnectionString(mongoUri);
         MongoClientSettings settings = MongoClientSettings.builder()

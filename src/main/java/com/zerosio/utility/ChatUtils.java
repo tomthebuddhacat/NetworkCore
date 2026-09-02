@@ -1,28 +1,26 @@
 package com.zerosio.utility;
 
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.chat.ComponentBuilder;
+
+import com.velocitypowered.api.command.CommandSource;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 
 public class ChatUtils {
 
-    public static void sendCopyableText(ProxiedPlayer player, String label, String value) {
-        TextComponent component = new TextComponent(label + " §f" + value);
-        component.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, value));
-        component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder("§7Click to copy").create()));
-        component.setUnderlined(true);
-        player.sendMessage(component);
+    public static void sendCopyableText(CommandSource commandSource, String label, String value) {
+        Component component = Component.text(label + " " + value)
+                .clickEvent(ClickEvent.copyToClipboard(value))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to copy")));
+
+        commandSource.sendMessage(component);
     }
-    
-    public static void sendClickableText(ProxiedPlayer player, String text, String hover, String value, ClickEvent.Action e) {
-        TextComponent component = new TextComponent(text);
-        component.setClickEvent(new ClickEvent(e, value));
-        component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder(hover).create()));
-        //component.setUnderlined(true);
-        player.sendMessage(component);
+
+    public static void sendClickableText(CommandSource commandSource, String text, String hover, String value, ClickEvent clickEvent) {
+        Component component = Component.text(text)
+                .clickEvent(clickEvent)
+                .hoverEvent(HoverEvent.showText(Component.text(hover)));
+
+        commandSource.sendMessage(component);
     }
 }
