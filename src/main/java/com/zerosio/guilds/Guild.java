@@ -264,7 +264,7 @@ public class Guild {
 				if (p != null) {
 					p.sendMessage(Messages.get("guild-level-up-header"));
 					p.sendMessage(Messages.get("guild-level-up-message", Collections.singletonMap("guildLevel", String.valueOf(Level.getLevelFromXP(experience + toAdd)))));
-					p.sendMessage(Messages.get("guild-level-up-bottom-header"));
+					p.sendMessage(Messages.get("guild-level-up-header"));
 				}
 			});
 		}

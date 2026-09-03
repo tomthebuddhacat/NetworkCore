@@ -1,20 +1,18 @@
 package com.zerosio.friends;
 
+import com.velocitypowered.api.proxy.Player;
 import com.zerosio.Core;
+import com.zerosio.Messages;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.database.User;
 import com.zerosio.friends.database.FriendsDB;
 import com.zerosio.privacy.Ignores;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,55 +27,55 @@ public class Friend {
 	private static final long REQUEST_EXPIRY = 5 * 60 * 1000L;
 	private static final long REQUEST_COOLDOWN = 3 * 1000L;
 
-	public static void sendHelp(ProxiedPlayer player) {
+	public static void sendHelp(Player player) {
 		sendDivider(player);
-		sendFriendMsg(player, "friend accept <player>", "Accept a friend request");
-		sendFriendMsg(player, "friend add <player>", "Add a player as a friend");
-		sendFriendMsg(player, "friend best <player>", "Toggle a player as best friend");
-		sendFriendMsg(player, "friend deny <player>", "Decline a friend request");
-		sendFriendMsg(player, "friend block <player>", "Block a player from sending requests");
-		sendFriendMsg(player, "friend unblock <player>", "Unblock a player");
-		sendFriendMsg(player, "friend help", "Prints all available friend commands");
-		sendFriendMsg(player, "friend list <page>", "List your friends");
-		sendFriendMsg(player, "friend notifications", "Toggle friend join/leave notifications");
-		sendFriendMsg(player, "friend remove <player>", "Remove a player from your friends");
-		sendFriendMsg(player, "friend removeall", "Remove all your friends");
+		sendFriendMsg(player, "friend accept <player>", "friend-command-accept-description");
+		sendFriendMsg(player, "friend add <player>", "friend-command-add-description");
+		sendFriendMsg(player, "friend best <player>", "friend-command-best-description");
+		sendFriendMsg(player, "friend deny <player>", "friend-command-deny-description");
+		sendFriendMsg(player, "friend block <player>", "friend-command-block-description");
+		sendFriendMsg(player, "friend unblock <player>", "friend-command-unblock-description");
+		sendFriendMsg(player, "friend help", "friend-command-help-description");
+		sendFriendMsg(player, "friend list <page>", "friend-command-list-description");
+		sendFriendMsg(player, "friend notifications", "friend-command-notifications-description");
+		sendFriendMsg(player, "friend remove <player>", "friend-command-remove-description");
+		sendFriendMsg(player, "friend removeall", "friend-command-removeall-description");
 		sendDivider(player);
 	}
 
-	public static void handleAdd(ProxiedPlayer from, ProxiedPlayer to) {
+	public static void handleAdd(Player from, Player to) {
 		UUID senderId = from.getUniqueId();
 		UUID receiverId = to.getUniqueId();
 		long now = System.currentTimeMillis();
 
-		if (senderId.equals(receiverId) && !from.getName().equalsIgnoreCase("Zerosio")) {
-			from.sendMessage("§cYou cannot add yourself as a friend!");
+		if (senderId.equals(receiverId)) {
+			from.sendMessage(Messages.get("friend-command-you-cannot-add-yourself"));
 			return;
 		}
 
 		if (cooldowns.containsKey(senderId)) {
 			long lastSent = cooldowns.get(senderId);
 			if (now - lastSent < REQUEST_COOLDOWN) {
-				from.sendMessage("§cPlease wait before sending another friend request.");
+				from.sendMessage(Messages.get("friend-command-on-cooldown"));
 				return;
 			}
 		}
 
-		if (!to.isConnected() || to == null) {
-			from.sendMessage("§cPlayer not found!");
+		if (to == null) {
+			from.sendMessage(Messages.get("friend-command-player-not-online"));
 			return;
 		}
 
 		if (FriendsDB.getFriends(from.getUniqueId()).contains(to.getUniqueId())) {
 			sendDivider(from);
-			from.sendMessage("§cYou are already friends with this player!");
+			from.sendMessage(Messages.get("friend-command-already-friends-with-this-player"));
 			sendDivider(from);
 			return;
 		}
 
 		if (Ignores.getIgnoredUsers(to.getUniqueId()).contains(from.getUniqueId())) {
 			sendDivider(from);
-			from.sendMessage("§cYou are blocked from sending requests to this player!");
+			from.sendMessage(Messages.get("friend-command-you-are-blocked"));
 			sendDivider(from);
 			return;
 		}
@@ -86,7 +84,7 @@ public class Friend {
 				pendingRequests.get(receiverId).containsKey(senderId)) {
 			long sentTime = pendingRequests.get(receiverId).get(senderId);
 			if (now - sentTime < REQUEST_EXPIRY) {
-				from.sendMessage("§cYou've already sent a friend request to this player.");
+				from.sendMessage(Messages.get("friend-command-request-already-sent"));
 				return;
 			}
 		}
@@ -95,153 +93,172 @@ public class Friend {
 		cooldowns.put(senderId, now);
 
 		sendDivider(from);
-		from.sendMessage("§eYou sent a friend request to " + CoreAPI.getPlayerRank(receiverId).getPrefix()
-						 + to.getName() + "§e! They have 5 minutes to accept it!");
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(receiverId).getPrefix());
+		messagePlaceholders.put("playerName", to.getUsername());
+		messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(senderId).getPrefix());
+		messagePlaceholders.put("playerName", from.getUsername());
+
+		from.sendMessage(Messages.get("friend-command-request-sent", messagePlaceholders));
 		sendDivider(from);
 
 		sendDivider(to);
-		to.sendMessage("§eFriend request from " + CoreAPI.getPlayerRank(senderId).getPrefix() + from.getName() + "§e!");
+		to.sendMessage(Messages.get("friend-command-request-recieved", messagePlaceholders));
 
-		BaseComponent accept = new TextComponent("§a§l[ACCEPT]");
-		accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/friend accept " + from.getName()));
-		accept.setHoverEvent(
-			new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§bClick to accept the friend request")));
+		Component acceptComponent = Messages.get("friend-command-accept")
+				.clickEvent(ClickEvent.runCommand("/friend accept " + from.getUsername()))
+				.hoverEvent(HoverEvent.showText(Messages.get("friend-command-accept-hover")));
 
-		BaseComponent deny = new TextComponent("§c§l[DENY]");
-		deny.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/friend deny " + from.getName()));
-		deny.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§bClick to deny the friend request")));
+		Component denyComponent = Messages.get("friend-command-deny")
+				.clickEvent(ClickEvent.runCommand("/friend deny " + from.getUsername()))
+				.hoverEvent(HoverEvent.showText(Messages.get("friend-command-deny-hover")));
 
-		BaseComponent block = new TextComponent("§7§l[BLOCK]");
-		block.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/friend block " + from.getName()));
-		block.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-										   new Text("§bClick to block all future friend requests and chat messages from this player")));
+		Component blockComponent = Messages.get("friend-command-block")
+				.clickEvent(ClickEvent.runCommand("/friend block " + from.getUsername()))
+				.hoverEvent(HoverEvent.showText(Messages.get("friend-command-block-hover")));
 
-		BaseComponent[] full = new ComponentBuilder("")
-		.append(accept).append(" §8- ")
-		.append(deny).append(" §8- ")
-		.append(block)
-		.create();
+		Component component = Component.empty()
+				.append(acceptComponent)
+				.append(Messages.get("friend-command-separator"))
+				.append(denyComponent)
+				.append(Messages.get("friend-command-separator"))
+				.append(blockComponent);
 
-		to.sendMessage(full);
+		to.sendMessage(component);
 		sendDivider(to);
 
-		ProxyServer.getInstance().getScheduler().schedule(Core.getInstance(), new Runnable() {
-			@Override
-			public void run() {
-				if (hasPendingRequest(senderId, receiverId)) {
-					clearRequest(senderId, receiverId);
 
-					ProxiedPlayer senderOnline = ProxyServer.getInstance().getPlayer(senderId);
-					ProxiedPlayer receiverOnline = ProxyServer.getInstance().getPlayer(receiverId);
+		Core.getInstance().getProxy().getScheduler()
+				.buildTask(Core.getInstance(), () -> {
+					if (hasPendingRequest(senderId, receiverId)) {
+						clearRequest(senderId, receiverId);
 
-					if (senderOnline != null && senderOnline.isConnected()) {
-						sendDivider(senderOnline);
-						senderOnline.sendMessage("§cYour friend request to "
-												 + CoreAPI.getPlayerRank(receiverId).getPrefix() + to.getName() + " has expired.");
-						sendDivider(senderOnline);
+						Player senderOnline = Core.getInstance().getProxy().getPlayer(senderId).orElse(null);
+						Player receiverOnline = Core.getInstance().getProxy().getPlayer(receiverId).orElse(null);
+
+						if (senderOnline != null) {
+							Map<String, String> senderMessagePlaceholders = new HashMap<>();
+							senderMessagePlaceholders.put("targetRank", CoreAPI.getPlayerRank(receiverId).getPrefix());
+							senderMessagePlaceholders.put("targetName", to.getUsername());
+
+							sendDivider(senderOnline);
+							senderOnline.sendMessage(Messages.get("friend-request-expired-sender", senderMessagePlaceholders));
+							sendDivider(senderOnline);
+						}
+
+						if (receiverOnline != null) {
+							Map<String, String> receiverMessagePlaceholders = new HashMap<>();
+							receiverMessagePlaceholders.put("senderRank", CoreAPI.getPlayerRank(senderId).getPrefix());
+							receiverMessagePlaceholders.put("senderName", from.getUsername());
+
+							sendDivider(receiverOnline);
+							receiverOnline.sendMessage(Messages.get("friend-request-expired-receiver", receiverMessagePlaceholders));
+							sendDivider(receiverOnline);
+						}
 					}
-
-					if (receiverOnline != null && receiverOnline.isConnected()) {
-						sendDivider(receiverOnline);
-						receiverOnline.sendMessage("§cThe friend request from "
-												   + CoreAPI.getPlayerRank(senderId).getPrefix() + from.getName() + " has expired.");
-						sendDivider(receiverOnline);
-					}
-				}
-			}
-		}, REQUEST_EXPIRY, java.util.concurrent.TimeUnit.MILLISECONDS);
+				})
+				.delay(Duration.ofMillis(REQUEST_EXPIRY))
+				.schedule();
 	}
 
-	public static void handleBestFriend(ProxiedPlayer player, ProxiedPlayer target) {
+	public static void handleBestFriend(Player player, Player target) {
 		UUID playerUUID = player.getUniqueId();
 		UUID targetUUID = target.getUniqueId();
 
 		if (!FriendsDB.getFriends(playerUUID).contains(targetUUID)) {
 			sendDivider(player);
-			player.sendMessage("§cYou need to be friends with this player first!");
+			player.sendMessage(Messages.get("friend-command-you-must-be-friends"));
 			sendDivider(player);
 			return;
 		}
 
 		List<UUID> bestFriends = FriendsDB.getBestFriends(playerUUID);
 		boolean isBestFriend = bestFriends.contains(targetUUID);
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("targetRank", CoreAPI.getPlayerRank(targetUUID).getPrefix());
+		messagePlaceholders.put("targetName", target.getUsername());
+		messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(playerUUID).getPrefix());
+		messagePlaceholders.put("playerName", player.getUsername());
 
 		if (isBestFriend) {
 			FriendsDB.removeBestFriend(playerUUID, targetUUID);
 			sendDivider(player);
-			player.sendMessage("§aRemoved " + CoreAPI.getPlayerRank(targetUUID).getPrefix() + target.getName()
-							   + " §afrom best friends!");
+
+			player.sendMessage(Messages.get("best-friend-removed", messagePlaceholders));
 			sendDivider(player);
 
-			if (target.isConnected()) {
+			if (target != null) {
 				sendDivider(target);
-				target.sendMessage(CoreAPI.getPlayerRank(playerUUID).getPrefix() + player.getName()
-								   + " §cremoved you from their best friends!");
+				target.sendMessage(Messages.get("best-friend-removed-notification", messagePlaceholders));
 				sendDivider(target);
 			}
 		} else {
 			FriendsDB.addBestFriend(playerUUID, targetUUID);
 			sendDivider(player);
-			player.sendMessage("§aAdded " + CoreAPI.getPlayerRank(targetUUID).getPrefix() + target.getName()
-							   + " §ato best friends!");
+			player.sendMessage(Messages.get("best-friend-added", messagePlaceholders));
 			sendDivider(player);
 
-			if (target.isConnected()) {
+			if (target != null) {
 				sendDivider(target);
-				target.sendMessage(CoreAPI.getPlayerRank(playerUUID).getPrefix() + player.getName()
-								   + " §aadded you to their best friends!");
+				target.sendMessage(Messages.get("best-friend-added-notification", messagePlaceholders));
 				sendDivider(target);
 			}
 		}
 	}
 
-	public static void handleAccept(ProxiedPlayer receiver, ProxiedPlayer sender) {
+	public static void handleAccept(Player receiver, Player sender) {
 		UUID senderId = sender.getUniqueId();
 		UUID receiverId = receiver.getUniqueId();
 
 		if (!hasPendingRequest(senderId, receiverId)) {
-			receiver.sendMessage("§cYou don't have a pending friend request from this player.");
+			receiver.sendMessage(Messages.get("friend-command-no-pending-friend-request"));
 			return;
 		}
 
 		clearRequest(senderId, receiverId);
 		FriendsDB.addFriend(senderId, receiverId);
 		FriendsDB.addFriend(receiverId, senderId);
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("senderPlayerRank", CoreAPI.getPlayerRank(senderId).getPrefix());
+		messagePlaceholders.put("senderPlayerName", sender.getUsername());
+		messagePlaceholders.put("receiverPlayerRank", CoreAPI.getPlayerRank(receiverId).getPrefix());
+		messagePlaceholders.put("receiverPlayerName", receiver.getUsername());
 
 		sendDivider(receiver);
-		receiver.sendMessage(
-			"§aYou are now friends with " + CoreAPI.getPlayerRank(senderId).getPrefix() + sender.getName() + "§a!");
+		receiver.sendMessage(Messages.get("friend-command-friend-added-successfully", messagePlaceholders));
 		sendDivider(receiver);
 
 		sendDivider(sender);
-		sender.sendMessage("§aYou are now friends with " + CoreAPI.getPlayerRank(receiverId).getPrefix()
-						   + receiver.getName() + "§a!");
+		sender.sendMessage(Messages.get("friend-command-player-accepted-friend-request", messagePlaceholders));
 		sendDivider(sender);
 	}
 
-	public static void handleDeny(ProxiedPlayer receiver, ProxiedPlayer sender) {
+	public static void handleDeny(Player receiver, Player sender) {
 		UUID senderId = sender.getUniqueId();
 		UUID receiverId = receiver.getUniqueId();
 
 		if (!hasPendingRequest(senderId, receiverId)) {
-			receiver.sendMessage("§cYou don't have a pending friend request from this player.");
+			receiver.sendMessage(Messages.get("friend-command-no-pending-friend-request"));
 			return;
 		}
 
 		clearRequest(senderId, receiverId);
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("senderPlayerRank", CoreAPI.getPlayerRank(senderId).getPrefix());
+		messagePlaceholders.put("senderPlayerName", sender.getUsername());
+		messagePlaceholders.put("receiverPlayerRank", CoreAPI.getPlayerRank(receiverId).getPrefix());
+		messagePlaceholders.put("receiverPlayerName", receiver.getUsername());
 
 		sendDivider(receiver);
-		receiver.sendMessage("§eYou denied the friend request from " + CoreAPI.getPlayerRank(senderId).getPrefix()
-							 + sender.getName() + "§e.");
+		receiver.sendMessage(Messages.get("friend-command-friend-request-denied-successfully", messagePlaceholders));
 		sendDivider(receiver);
 
 		sendDivider(sender);
-		sender.sendMessage("§cYour friend request was denied by " + CoreAPI.getPlayerRank(receiverId).getPrefix()
-						   + receiver.getName() + "§c.");
+		sender.sendMessage(Messages.get("friend-command-player-denied-friend-request", messagePlaceholders));
 		sendDivider(sender);
 	}
 
-	public static void handleBlock(ProxiedPlayer receiver, ProxiedPlayer sender) {
+	public static void handleBlock(Player receiver, Player sender) {
 		UUID senderId = sender.getUniqueId();
 		UUID receiverId = receiver.getUniqueId();
 
@@ -252,17 +269,22 @@ public class Friend {
 		FriendsDB.removeBestFriend(receiverId, senderId);
 		FriendsDB.removeBestFriend(senderId, receiverId);
 
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("senderPlayerRank", CoreAPI.getPlayerRank(senderId).getPrefix());
+		messagePlaceholders.put("senderPlayerName", sender.getUsername());
+		messagePlaceholders.put("receiverPlayerRank", CoreAPI.getPlayerRank(receiverId).getPrefix());
+		messagePlaceholders.put("receiverPlayerName", receiver.getUsername());
+
 		sendDivider(receiver);
-		receiver.sendMessage("§7You blocked " + CoreAPI.getPlayerRank(senderId).getPrefix() + sender.getName()
-							 + "§7. They can no longer send friend requests or messages.");
+		receiver.sendMessage(Messages.get("you-have-blocked-user-successfully", messagePlaceholders));
 		sendDivider(receiver);
 
 		sendDivider(sender);
-		sender.sendMessage("§cYou have been blocked by this player.");
+		sender.sendMessage(Messages.get("you-are-currently-blocked-by-this-player"));
 		sendDivider(sender);
 	}
 
-	public static void handleUnblock(ProxiedPlayer player, String targetName) {
+	public static void handleUnblock(Player player, String targetName) {
 		UUID playerUUID = player.getUniqueId();
 		List<UUID> blockedUsers = Ignores.getIgnoredUsers(playerUUID);
 
@@ -280,19 +302,23 @@ public class Friend {
 
 		if (foundUUID == null) {
 			sendDivider(player);
-			player.sendMessage("§cYou haven't blocked this player!");
+			player.sendMessage(Messages.get("you-dont-have-this-player-blocked"));
 			sendDivider(player);
 			return;
 		}
 
 		Ignores.unignore(playerUUID, foundUUID);
 
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(foundUUID).getPrefix());
+		messagePlaceholders.put("playerName", foundName);
+
 		sendDivider(player);
-		player.sendMessage("§aYou unblocked " + CoreAPI.getPlayerRank(foundUUID).getPrefix() + foundName + "§a!");
+		player.sendMessage(Messages.get("you-have-successfully-unlocked-player", messagePlaceholders));
 		sendDivider(player);
 	}
 
-	public static void handleRemove(ProxiedPlayer sender, String targetName) {
+	public static void handleRemove(Player sender, String targetName) {
 		UUID senderUUID = sender.getUniqueId();
 		List<UUID> allFriends = FriendsDB.getAllFriends(senderUUID);
 
@@ -310,7 +336,7 @@ public class Friend {
 
 		if (foundUUID == null) {
 			sendDivider(sender);
-			sender.sendMessage("§cYou are not friends with this player!");
+			sender.sendMessage(Messages.get("you-are-not-friends-with-this-player"));
 			sendDivider(sender);
 			return;
 		}
@@ -320,27 +346,31 @@ public class Friend {
 		FriendsDB.removeBestFriend(senderUUID, foundUUID);
 		FriendsDB.removeBestFriend(foundUUID, senderUUID);
 
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("foundPlayerRank", CoreAPI.getPlayerRank(foundUUID).getPrefix());
+		messagePlaceholders.put("foundPlayerName", foundName);
+		messagePlaceholders.put("senderPlayerRank", CoreAPI.getPlayerRank(senderUUID).getPrefix());
+		messagePlaceholders.put("senderPlayerName", sender.getUsername());
+
 		sendDivider(sender);
-		sender.sendMessage("§aYou removed " + CoreAPI.getPlayerRank(foundUUID).getPrefix() + foundName
-						   + " §afrom your friends list!");
+		sender.sendMessage(Messages.get("successfully-removed-player-from-friend-list", messagePlaceholders));
 		sendDivider(sender);
 
-		ProxiedPlayer targetOnline = ProxyServer.getInstance().getPlayer(foundUUID);
-		if (targetOnline != null && targetOnline.isConnected()) {
+		Player targetOnline = Core.getInstance().getProxy().getPlayer(foundUUID).orElse(null);
+		if (targetOnline != null && targetOnline != null) {
 			sendDivider(targetOnline);
-			targetOnline.sendMessage(CoreAPI.getPlayerRank(senderUUID).getPrefix() + sender.getName()
-									 + " §eremoved you from their friends list!");
+			targetOnline.sendMessage(Messages.get("you-have-been-removed-from-friend-list", messagePlaceholders));
 			sendDivider(targetOnline);
 		}
 	}
 
-	public static void handleRemoveAll(ProxiedPlayer player) {
+	public static void handleRemoveAll(Player player) {
 		UUID playerUUID = player.getUniqueId();
 		List<UUID> allFriends = FriendsDB.getAllFriends(playerUUID);
 
 		if (allFriends.isEmpty()) {
 			sendDivider(player);
-			player.sendMessage("§cYou don't have any friends to remove!");
+			player.sendMessage(Messages.get("you-dont-have-any-friends-added"));
 			sendDivider(player);
 			return;
 		}
@@ -353,20 +383,20 @@ public class Friend {
 		}
 
 		sendDivider(player);
-		player.sendMessage("§aYou removed all friends from your friends list!");
+		player.sendMessage(Messages.get("removed-everyone-from-friend-list"));
 		sendDivider(player);
 	}
 
 	public static String serverName;
 
-	public static void handleList(ProxiedPlayer player, int page) {
+	public static void handleList(Player player, int page) {
 		UUID playerUUID = player.getUniqueId();
 		List<UUID> allFriends = FriendsDB.getAllFriends(playerUUID);
 		List<UUID> bestFriends = FriendsDB.getBestFriends(playerUUID);
 
 		if (allFriends.isEmpty()) {
 			sendDivider(player);
-			player.sendMessage("§cYou don't have any friends yet!");
+			player.sendMessage(Messages.get("you-dont-have-any-friends-added"));
 			sendDivider(player);
 			return;
 		}
@@ -374,8 +404,8 @@ public class Friend {
 		// Sort with priority bruv
 		List<UUID> sortedFriends = new ArrayList<>(allFriends);
 		sortedFriends.sort((a, b) -> {
-			boolean aOnline = ProxyServer.getInstance().getPlayer(a) != null;
-			boolean bOnline = ProxyServer.getInstance().getPlayer(b) != null;
+			boolean aOnline = Core.getInstance().getProxy().getPlayer(a) != null;
+			boolean bOnline = Core.getInstance().getProxy().getPlayer(b) != null;
 
 			boolean aBest = bestFriends.contains(a);
 			boolean bBest = bestFriends.contains(b);
@@ -399,15 +429,25 @@ public class Friend {
 		int endIndex = Math.min(startIndex + pageSize, sortedFriends.size());
 
 		sendDivider(player);
-		player.sendMessage("        §6Friends (Page " + page + " of " + totalPages + ")");
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("pageNumber", String.valueOf(page));
+		messagePlaceholders.put("totalPages", String.valueOf(totalPages));
+
+		player.sendMessage(Messages.get("friends-page-title", messagePlaceholders));
 		for (int i = startIndex; i < endIndex; i++) {
 			UUID friendUUID = sortedFriends.get(i);
 			String friendName = User.retrieveLastKnownName(friendUUID);
 			Rank friendRank = CoreAPI.getPlayerRank(friendUUID);
-			boolean isOnline = ProxyServer.getInstance().getPlayer(friendUUID) != null;
+			boolean isOnline = Core.getInstance().getProxy().getPlayer(friendUUID) != null;
 			boolean isBestFriend = bestFriends.contains(friendUUID);
 
 			String bestFriendIndicator = isBestFriend ? "§6★ " : "";
+
+			Map<String, String> serverThing = new HashMap<>();
+			messagePlaceholders.put("bestFriendIndicator", bestFriendIndicator);
+			messagePlaceholders.put("friendRankColour", friendRank.getColour());
+			messagePlaceholders.put("friendName", friendName);
+			messagePlaceholders.put("serverName", serverName);
 
 			if (isOnline) {
 				serverName = CoreAPI.getPlayerServerName(CoreAPI.getProxyPlayerUsingUUID(friendUUID));
@@ -431,35 +471,33 @@ public class Friend {
 				serverName = name(serverName, "sbms", "Mineshaft");
 				serverName = name(serverName, "sbbw", "Backwater Bayou");
 
-				player.sendMessage(
-					"§7- " + bestFriendIndicator + friendRank.getColour() + friendName + " §e is in " + serverName);
+				player.sendMessage(Messages.get("friend-server-online", serverThing));
 			} else {
-				player.sendMessage(
-					"§7- " + bestFriendIndicator + friendRank.getColour() + friendName +
-					" §cis currently offline"
-				);
+				player.sendMessage(Messages.get("friend-server-offline", serverThing));
 			}
 		}
 
 		if (totalPages > 1) {
-			player.sendMessage("");
-			player.sendMessage("§eUse §6/friend list <page> §eto view more friends");
+			player.sendMessage(Component.empty());
+			player.sendMessage(Messages.get("friends-view-more-from-list"));
 		}
 
 		sendDivider(player);
 	}
 
 
-	public static void handleToggleNotifications(ProxiedPlayer player) {
+	public static void handleToggleNotifications(Player player) {
 		UUID playerUUID = player.getUniqueId();
 		User user = User.getUser(playerUUID);
 		boolean currentSetting = user.getBoolean("friend.join_leave_msg");
 
 		user.setData("friend.join_leave_msg", !currentSetting);
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("status", currentSetting ? "<red>disabled" : "<green>enabled");
 
 		sendDivider(player);
-		player.sendMessage("§aFriend notifications are now " + (!currentSetting ? "§aenabled" : "§cdisabled"));
-		sendDivider(player);
+		player.sendMessage(Messages.get("friend-notifications-toggle", messagePlaceholders));
+    	sendDivider(player);
 	}
 
 	public static boolean hasPendingRequest(UUID from, UUID to) {
@@ -478,26 +516,24 @@ public class Friend {
 		}
 	}
 
-	public static String getDivider() {
-		return "§9§m-----------------------------------------------------";
+	public static void sendDivider(Player player) {
+		player.sendMessage(Messages.get("friend-command-message-divider"));
 	}
 
-	public static void sendDivider(ProxiedPlayer player) {
-		player.sendMessage(getDivider());
-	}
+	public static void sendFriendMsg(Player player, String command, String path) {
+		Map<String, String> messagePlaceholders = new HashMap<>();
+		messagePlaceholders.put("friendCommand", command);
 
-	public static void sendFriendMsg(ProxiedPlayer player, String command, String description) {
-		TextComponent cmdComponent = new TextComponent("§e/" + command);
-		cmdComponent.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/" + command));
-		cmdComponent.setHoverEvent(
-			new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§7Click to put the command in chat")));
+		Component component = Messages.get("friend-command-label", messagePlaceholders)
+				.clickEvent(ClickEvent.suggestCommand("/" + command))
+				.hoverEvent(HoverEvent.showText(Messages.get("friend-command-label-hover")));
 
-		BaseComponent[] finalMessage = new ComponentBuilder("§e")
-		.append(cmdComponent)
-		.append(" §8— §b" + description)
-		.create();
+		Component anotherComponent = Messages.get("friend-command-prefix")
+				.append(component)
+				.append(Messages.get("friend-command-separator"))
+				.append(Messages.get(path));
 
-		player.sendMessage(finalMessage);
+		player.sendMessage(anotherComponent);
 	}
 
 	public static String name(String serverName, String beforeName, String afterName) {

@@ -1,10 +1,10 @@
 package com.zerosio.api;
 
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import com.zerosio.Core;
 import com.zerosio.database.User;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.config.ServerInfo;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import java.util.UUID;
 
@@ -66,7 +66,7 @@ public class CoreAPI {
 	}
 
 	public static void debug(UUID uuid, String message) {
-		ProxiedPlayer player = ProxyServer.getInstance().getPlayer(uuid);
+		Player player = Core.getInstance().getProxy().getPlayer(uuid).orElse(null);
 		if (player != null) {
 			User user = User.getUser(uuid);
 			if (user != null)
@@ -78,15 +78,15 @@ public class CoreAPI {
 		debug(UUID.fromString(uuid), message);
 	}
 
-	public static ProxiedPlayer getProxyPlayer(String name) {
-		return ProxyServer.getInstance().getPlayer(name);
+	public static Player getProxyPlayer(String name) {
+		return Core.getInstance().getProxy().getPlayer(name).orElse(null);
 	}
 
-	public static ProxiedPlayer getProxyPlayerUsingUUID(UUID uuid) {
-		return ProxyServer.getInstance().getPlayer(uuid);
+	public static Player getProxyPlayerUsingUUID(UUID uuid) {
+		return Core.getInstance().getProxy().getPlayer(uuid).orElse(null);
 	}
 
-	public static void setRank(ProxiedPlayer player, Rank rank) {
+	public static void setRank(Player player, Rank rank) {
 		User user = User.getUser(player.getUniqueId());
 
 		if (rank.isBelowOrEqual(Rank.YOUTUBE)) {
@@ -100,13 +100,13 @@ public class CoreAPI {
 		user.setData("rank", rank.name().toUpperCase());
 	}
 
-	public static void setMonthlyRank(ProxiedPlayer player, Rank rank) {
+	public static void setMonthlyRank(Player player, Rank rank) {
 		User.getUser(player.getUniqueId()).setMonthlyRank(rank);
 	}
 
-	public static String getPlayerServerName(ProxiedPlayer player) {
-		if (player.getServer() != null) {
-			ServerInfo server = player.getServer().getInfo();
+	public static String getPlayerServerName(Player player) {
+		if (player.getCurrentServer().isPresent()) {
+			ServerInfo server = player.getCurrentServer().get().getServerInfo();
 			return server.getName();
 		}
 		return "unknown";

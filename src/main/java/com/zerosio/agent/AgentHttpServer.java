@@ -3,12 +3,13 @@ package com.zerosio.agent;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.config.ServerInfo;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import com.zerosio.Core;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 public class AgentHttpServer {
@@ -21,10 +22,11 @@ public class AgentHttpServer {
         server.createContext("/server/register", exchange -> {
             try {
                 if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-                    sendJson(exchange, 405, Map.of(
-                            "success", false,
-                            "error", "METHOD_NOT_ALLOWED"
-                    ));
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("error", "METHOD_NOT_ALLOWED");
+
+                    sendJson(exchange, 405, response);
                     return;
                 }
 
@@ -36,35 +38,30 @@ public class AgentHttpServer {
                 String portNum = (String) data.get("port");
 
                 if (name == null || host == null || portNum == null) {
-                    sendJson(exchange, 400, Map.of(
-                            "success", false,
-                            "error", "INVALID_BODY"
-                    ));
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("error", "INVALID_BODY");
+
+                    sendJson(exchange, 400, response);
                     return;
                 }
 
-                if (ProxyServer.getInstance().getServers().containsKey(name)) {
-                    sendJson(exchange, 409, Map.of(
-                            "success", false,
-                            "error", "ALREADY_EXISTS"
-                    ));
+                if (Core.getInstance().getProxy().getServer(name).isPresent()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("error", "ALREADY_EXISTS");
+
+                    sendJson(exchange, 409, response);
                     return;
                 }
 
                 int port = Integer.parseInt((String) data.get("port"));
 
-                ServerInfo info = ProxyServer.getInstance().constructServerInfo(
-                        name,
-                        new InetSocketAddress(host, port),
-                        name,
-                        false
-                );
+                ServerInfo serverInfo = new ServerInfo(name, new InetSocketAddress(host, port));
 
-                ProxyServer.getInstance().getServers().put(name, info);
+                Core.getInstance().getProxy().registerServer(serverInfo);
 
-                ProxyServer.getInstance().getLogger().info(
-                        "[Agent] Constructed & registered server " + name + " (" + host + ":" + port + ")"
-                );
+                System.out.println("[Agent] Constructed & registered server " + name + " (" + host + ":" + port + ")");
 
                 sendJson(exchange, 200, Map.of("success", true));
 
@@ -94,7 +91,7 @@ public class AgentHttpServer {
 
                 String name = (String) data.get("name");
 
-                if (name == null || !ProxyServer.getInstance().getServers().containsKey(name)) {
+                if (name == null || !Core.getInstance().getProxy().getServer(name).isPresent()) {
                     sendJson(exchange, 404, Map.of(
                             "success", false,
                             "error", "NOT_FOUND"
@@ -102,11 +99,8 @@ public class AgentHttpServer {
                     return;
                 }
 
-                ProxyServer.getInstance().getServers().remove(name);
-
-                ProxyServer.getInstance().getLogger().info(
-                        "[Agent] Unregistered (destructed) server " + name
-                );
+                Core.getInstance().getProxy().getServer(name).ifPresent(registeredServer -> Core.getInstance().getProxy().unregisterServer(registeredServer.getServerInfo()));
+                System.out.println("[Agent] Unregistered (destructed) server " + name);
 
                 sendJson(exchange, 200, Map.of("success", true));
 
@@ -122,7 +116,7 @@ public class AgentHttpServer {
         });
 
         server.start();
-        ProxyServer.getInstance().getLogger().info("[Agent] HTTP server started on port 7800");
+        System.out.println("[Agent] HTTP server started on port 7800");
     }
 
     private static void sendJson(HttpExchange exchange, int status, Map<String, Object> body) {

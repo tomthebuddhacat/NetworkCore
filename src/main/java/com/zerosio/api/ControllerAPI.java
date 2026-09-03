@@ -3,16 +3,19 @@ package com.zerosio.api;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.velocitypowered.api.proxy.server.RegisteredServer;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import com.zerosio.Core;
 import com.zerosio.api.request.SendRequest;
 import com.zerosio.instance.AvailableInstance;
 import com.zerosio.instance.InstanceSelector;
-import com.zerosio.utility.Json;import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.config.ServerInfo;
+import com.zerosio.utility.Json;
 
 public class ControllerAPI {
 	
 	public static ServerInfo getRandomAvailableInstanceServerInfo(String template) {
-		return ProxyServer.getInstance().getServerInfo(getRandomAvailableInstance(template).getName());
+		return Core.getInstance().getProxy().getServer(getRandomAvailableInstance(template).getName())
+				.map(RegisteredServer::getServerInfo).orElse(null);
 	}
 	
 	public static AvailableInstance getRandomAvailableInstance(String template) {

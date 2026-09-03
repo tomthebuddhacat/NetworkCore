@@ -1,30 +1,27 @@
 package com.zerosio.rank;
 
+import com.zerosio.Config;
+
 public enum Rank {
 
-    DEFAULT("§7", "§7"),
-    VIP("§a", "VIP"),
-    VIP_PLUS("§a", "VIP§6+"),
-    MVP("§b", "MVP"),
-    MVP_PLUS("§b", "MVP§c+"),
-    MVP_PLUS_PLUS("§6", "MVP§c++"),
-    YOUTUBE("§c", "§fYOUTUBE"),
-    HELPER("§9", "HELPER"),
-    MOD("§2", "MOD"),
-    GAMEMASTER("§2", "GM"),
-    BETATESTER("§d", "BT"),
-    ADMIN("§c", "ADMIN"),
-    DEPUTY("§c", "DEPUTY"),
-    COOWNER("§c", "COOWNER"),
-    JERRY("§d", "JERRY§c++"),
-    OWNER("§c", "OWNER");
+    DEFAULT("default"),
+    VIP("vip"),
+    VIP_PLUS("vip_plus"),
+    MVP("mvp"),
+    MVP_PLUS("mvp_plus"),
+    MVP_PLUS_PLUS("mvp_double_plus"),
+    YOUTUBE("media_youtube"),
+    HELPER("helper"),
+    MOD("mod"),
+    GAMEMASTER("gm"),
+    BETATESTER("bt"),
+    ADMIN("admin"),
+    OWNER("owner");
 
-    private final String prefix;
-    private final String color;
+    private final String rankName;
 
-    Rank(String color, String prefix) {
-        this.color = color;
-        this.prefix = prefix;
+    Rank(String rankName) {
+        this.rankName = rankName;
     }
 
     public static Rank getRankOrDefault(int level) {
@@ -41,23 +38,23 @@ public enum Rank {
     }
 
     public String getScoreRank() {
-        return this == DEFAULT ? "§7Default" : getPrefixColoured();
+        return this == DEFAULT ? "<gray>" : getPrefixColored();
     }
 
     public String getPrefix() {
-        return this == DEFAULT ? color : color + "[" + prefix + color + "] ";
-    }
-
-    public String getColour() {
-        return color;
+        return Config.getString("ranks." + rankName + ".rankDisplay", "");
     }
 
     public String getPrefixx() {
-        return prefix;
+        return getPrefix();
     }
 
-    public String getPrefixColoured() {
-        return color + prefix;
+    public String getPrefixColored() {
+        return getPrefix();
+    }
+
+    public String getColour() {
+        return getPrefixColored();
     }
 
     public boolean isBelowOrEqual(Rank rank) {
@@ -81,6 +78,6 @@ public enum Rank {
     }
 
     public String getFormattedRank() {
-        return prefix;
+        return getPrefix();
     }
 }

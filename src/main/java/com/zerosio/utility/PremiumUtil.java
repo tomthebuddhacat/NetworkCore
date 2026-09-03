@@ -1,6 +1,6 @@
 package com.zerosio.utility;
 
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import com.velocitypowered.api.proxy.Player;
 
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
@@ -12,9 +12,9 @@ import com.google.gson.JsonParser;
 
 public class PremiumUtil {
 
-    public static boolean isPremium(ProxiedPlayer player) {
+    public static boolean isPremium(Player player) {
         try {
-            String name = player.getName();
+            String name = player.getUsername();
 
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();

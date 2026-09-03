@@ -1,11 +1,12 @@
 package com.zerosio.commands;
 
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Core;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.commands.impl.CommandBase;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,17 +40,20 @@ public class StaffListCommand extends CommandBase {
     }
 
     @Override
-    public void execute(ProxiedPlayer sender, String[] args) {
-        List<ProxiedPlayer> staff = ProxyServer.getInstance().getPlayers().stream()
+    public void execute(Player sender, String[] args) {
+        List<Player> staff = Core.getInstance().getProxy().getAllPlayers().stream()
                 .filter(p -> CoreAPI.getPlayerRank(p.getUniqueId()).isAboveOrEqual(Rank.HELPER))
                 .collect(Collectors.toList());
 
-        sender.sendMessage(new TextComponent("      §6STAFF [§a" + staff.size() + "§6]"));
+        sender.sendMessage(Component.text("      STAFF [")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text(staff.size(), NamedTextColor.GREEN))
+                .append(Component.text("]", NamedTextColor.GOLD)));
 
         if (!staff.isEmpty()) {
-            for (ProxiedPlayer p : staff) {
+            for (Player p : staff) {
                 Rank rank = CoreAPI.getPlayerRank(p.getUniqueId());
-                sender.sendMessage(new TextComponent(rank.getPrefix() + p.getName()));
+                sender.sendMessage(Component.text(rank.getPrefix() + p.getUsername()));
             }
         }
     }

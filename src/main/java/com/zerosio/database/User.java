@@ -8,12 +8,13 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
+import com.velocitypowered.api.proxy.Player;
 import com.zerosio.Config;
+import com.zerosio.Core;
 import com.zerosio.chat.ChatModes;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bson.Document;
 
 import java.nio.charset.StandardCharsets;
@@ -259,9 +260,9 @@ public class User {
 	}
 
 	public void saveAsync() {
-		ProxyServer.getInstance().getScheduler().runAsync(
-			ProxyServer.getInstance().getPluginManager().getPlugin("NetworkCore"),
-			this::save);
+		Core.getInstance().getProxy().getScheduler()
+				.buildTask(this, this::save)
+				.schedule();
 	}
 
 	public static void saveAll() {
@@ -270,9 +271,10 @@ public class User {
 		}
 	}
 
-	public void debug(ProxiedPlayer player, String message) {
+	public void debug(Player player, String message) {
 		if (getBoolean("debug_mode")) {
-			player.sendMessage(new TextComponent("§c[SYSTEM] §f" + message));
+			player.sendMessage(Component.text("[SYSTEM] ").color(NamedTextColor.RED)
+					.append(Component.text(message).color(NamedTextColor.WHITE)));
 		}
 	}
 

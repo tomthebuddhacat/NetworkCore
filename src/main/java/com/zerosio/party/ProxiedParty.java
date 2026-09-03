@@ -1,11 +1,12 @@
 package com.zerosio.party;
 
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import com.zerosio.Core;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.database.User;
 import com.zerosio.party.database.PartyDB;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.config.ServerInfo;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,9 +33,9 @@ public class ProxiedParty {
 
     public void broadcast(String message) {
         for (UUID member : getMembers()) {
-            ProxiedPlayer player = ProxyServer.getInstance().getPlayer(member);
+            Player player = Core.getInstance().getProxy().getPlayer(member).orElse(null);
             if (player != null) {
-                player.sendMessage(message);
+                player.sendMessage(Component.text(message));
             }
         }
     }
@@ -53,7 +54,7 @@ public class ProxiedParty {
 
     public void warp(ServerInfo server) {
         for (UUID member : getMembers()) {
-            ProxiedPlayer player = ProxyServer.getInstance().getPlayer(member);
+            Player player = Core.getInstance().getProxy().getPlayer(member).orElse(null);
             if (player != null && player.isConnected()) {
                 player.connect(server);
             }
@@ -72,20 +73,20 @@ public class ProxiedParty {
         return count;
     }
 
-    public void chat(ProxiedPlayer sender, String message) {
+    public void chat(Player sender, String message) {
         String formatted = "§9Party > " + CoreAPI.getPlayerRank(sender.getUniqueId()).getPrefix() +
-                sender.getName() + "§f: §f" + message;
+                sender.getUsername() + "§f: §f" + message;
         broadcast(formatted);
     }
 
-    public void sendPartyList(ProxiedPlayer requester) {
+    public void sendPartyList(Player requester) {
         Party.sendDivider(requester);
 
         List<UUID> members = getMembers();
         int memberCount = members.size();
 
-        requester.sendMessage("§eParty Members §6(" + memberCount + ")");
-        requester.sendMessage("");
+        requester.sendMessage(Component.text("§eParty Members §6(" + memberCount + ")");
+        requester.sendMessage(Component.text(""));
 
         UUID leaderId = getLeader();
         String leaderName = User.retrieveLastKnownName(leaderId);

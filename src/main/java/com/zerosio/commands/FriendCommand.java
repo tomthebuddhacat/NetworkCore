@@ -1,11 +1,11 @@
 package com.zerosio.commands;
 
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Messages;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.commands.impl.CommandBase;
 import com.zerosio.friends.Friend;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +33,7 @@ public class FriendCommand extends CommandBase {
 	}
 
 	@Override
-	public void execute(ProxiedPlayer player, String[] args) {
+	public void execute(Player player, String[] args) {
 		if (args.length == 0) {
 			Friend.sendHelp(player);
 			return;
@@ -48,26 +48,27 @@ public class FriendCommand extends CommandBase {
 
 			case "add":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend add <player>"));
+					player.sendMessage(Messages.get("friend-command-usage"));
 					return;
 				}
 
-				if (args[1].equalsIgnoreCase(player.getName())) {
-					player.sendMessage(new TextComponent("§cYou cannot add yourself as a friend!"));
+				if (args[1].equalsIgnoreCase(player.getUsername())) {
+
+					player.sendMessage(Messages.get("friend-command-you-cannot-add-yourself"));
 					return;
 				}
 
-				ProxiedPlayer targetAdd = CoreAPI.getProxyPlayer(args[1]);
+				Player targetAdd = CoreAPI.getProxyPlayer(args[1]);
 				if (targetAdd != null) {
 					Friend.handleAdd(player, targetAdd);
 				} else {
-					player.sendMessage(new TextComponent("§cPlayer not found."));
+					player.sendMessage(Messages.get("friend-command-player-not-online"));
 				}
 				break;
 
 			case "remove":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend remove <player>"));
+					player.sendMessage(Messages.get("remove-friend-command-usage"));
 					return;
 				}
 				Friend.handleRemove(player, args[1]);
@@ -83,7 +84,7 @@ public class FriendCommand extends CommandBase {
 					try {
 						page = Integer.parseInt(args[1]);
 					} catch (NumberFormatException e) {
-						player.sendMessage(new TextComponent("§cPlease provide a valid page number!"));
+						player.sendMessage(Messages.get("friend-command-provide-valid-page-number"));
 						return;
 					}
 				}
@@ -92,72 +93,72 @@ public class FriendCommand extends CommandBase {
 
 			case "best":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend best <player>"));
+					player.sendMessage(Messages.get("best-friend-command-usage"));
 					return;
 				}
 
-				if (args[1].equalsIgnoreCase(player.getName())) {
-					player.sendMessage(new TextComponent("§cYou cannot make yourself a best friend!"));
+				if (args[1].equalsIgnoreCase(player.getUsername())) {
+					player.sendMessage(Messages.get("friend-command-you-cannot-bestfriend-yourself"));
 					return;
 				}
 
-				ProxiedPlayer targetBest = CoreAPI.getProxyPlayer(args[1]);
+				Player targetBest = CoreAPI.getProxyPlayer(args[1]);
 				if (targetBest != null) {
 					Friend.handleBestFriend(player, targetBest);
 				} else {
-					player.sendMessage(new TextComponent("§cPlayer not found."));
+					player.sendMessage(Messages.get("friend-command-player-not-online"));
 				}
 				break;
 
 			case "accept":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend accept <player>"));
+					player.sendMessage(Messages.get("friend-command-accept-usage"));
 					return;
 				}
-				ProxiedPlayer targetAccept = CoreAPI.getProxyPlayer(args[1]);
+				Player targetAccept = CoreAPI.getProxyPlayer(args[1]);
 				if (targetAccept != null) {
 					Friend.handleAccept(player, targetAccept);
 				} else {
-					player.sendMessage(new TextComponent("§cPlayer not found."));
+					player.sendMessage(Messages.get("friend-command-player-not-online"));
 				}
 				break;
 
 			case "deny":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend deny <player>"));
+					player.sendMessage(Messages.get("friend-command-deny-usage"));
 					return;
 				}
-				ProxiedPlayer targetDeny = CoreAPI.getProxyPlayer(args[1]);
+				Player targetDeny = CoreAPI.getProxyPlayer(args[1]);
 				if (targetDeny != null) {
 					Friend.handleDeny(player, targetDeny);
 				} else {
-					player.sendMessage(new TextComponent("§cPlayer not found."));
+					player.sendMessage(Messages.get("friend-command-player-not-online"));
 				}
 				break;
 
 			case "block":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend block <player>"));
+					player.sendMessage(Messages.get("friend-command-block-usage"));
 					return;
 				}
 
 				// Prevent blocking yourself
-				if (args[1].equalsIgnoreCase(player.getName())) {
-					player.sendMessage(new TextComponent("§cYou cannot block yourself!"));
+				if (args[1].equalsIgnoreCase(player.getUsername())) {
+					player.sendMessage(Messages.get("friend-command-cannot-block-yourself"));
 					return;
 				}
 
-				ProxiedPlayer targetBlock = CoreAPI.getProxyPlayer(args[1]);
+				Player targetBlock = CoreAPI.getProxyPlayer(args[1]);
 				if (targetBlock != null) {
 					Friend.handleBlock(player, targetBlock);
 				} else {
-					player.sendMessage(new TextComponent("§cPlayer not found."));
+					player.sendMessage(Messages.get("friend-command-player-not-online"));
 				}
 				break;
 
 			case "unblock":
 				if (args.length < 2) {
-					player.sendMessage(new TextComponent("§cUsage: /friend unblock <player>"));
+					player.sendMessage(Messages.get("friend-command-unblock-usage"));
 					return;
 				}
 				Friend.handleUnblock(player, args[1]);
@@ -168,7 +169,7 @@ public class FriendCommand extends CommandBase {
 				break;
 
 			default:
-				player.sendMessage(new TextComponent("§cUnknown subcommand. Use /friend help."));
+				player.sendMessage(Messages.get("unknown-friend-sub-command"));
 				break;
 		}
 	}

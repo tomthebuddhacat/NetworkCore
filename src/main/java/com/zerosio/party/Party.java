@@ -1,19 +1,12 @@
 package com.zerosio.party;
 
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.zerosio.Core;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.database.User;
 import com.zerosio.party.database.PartyDB;
 import com.zerosio.privacy.Ignores;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.scheduler.ScheduledTask;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +21,7 @@ public class Party {
     private static final long INVITE_COOLDOWN = 3 * 1000L;
     private static final long DISBAND_DELAY = 5 * 60 * 1000L; // 5 minutes
 
-    public static void sendHelp(ProxiedPlayer player) {
+    public static void sendHelp(Player player) {
         sendDivider(player);
         player.sendMessage("§eAvailable commands:");
         sendPartyMsg(player, "party join <player>", "Join a public party");
@@ -45,7 +38,7 @@ public class Party {
         sendDivider(player);
     }
 
-    public static void handleInvite(ProxiedPlayer inviter, ProxiedPlayer target) {
+    public static void handleInvite(Player inviter, Player target) {
         UUID inviterId = inviter.getUniqueId();
         UUID targetId = target.getUniqueId();
         long now = System.currentTimeMillis();

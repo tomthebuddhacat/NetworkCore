@@ -1,27 +1,24 @@
 package com.zerosio.utility;
 
 import com.zerosio.Core;
-import net.md_5.bungee.api.ProxyServer;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class RunnableUtil {
 
     public static void runLater(Runnable runnable, long delayTicks) {
-        ProxyServer.getInstance().getScheduler().schedule(
-                Core.getInstance(),
-                runnable,
-                delayTicks * 50L,
-                TimeUnit.MILLISECONDS);
+        Core.getInstance().getProxy().getScheduler().buildTask(
+                Core.getInstance(), runnable)
+                .delay(delayTicks * 50L, TimeUnit.MILLISECONDS).schedule();
     }
 
     public static void runRepeating(Runnable runnable, long initialDelay, long interval) {
-        ProxyServer.getInstance().getScheduler().schedule(
-                Core.getInstance(),
-                runnable,
-                initialDelay * 50L,
-                interval * 50L,
-                TimeUnit.MILLISECONDS);
+        Core.getInstance().getProxy().getScheduler().buildTask(
+                Core.getInstance(), runnable)
+                .delay(Duration.ofMillis(initialDelay * 50L))
+                .repeat(Duration.ofMillis(interval * 50L))
+                .schedule();
     }
 
     public static void runNow(Runnable runnable) {
