@@ -1,10 +1,12 @@
 package com.zerosio.commands.authentication;
 
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Messages;
 import com.zerosio.authentication.AuthDB;
 import com.zerosio.authentication.Authentication;
 import com.zerosio.commands.impl.CommandBase;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,19 +39,21 @@ public class ChangePasswordCommand extends CommandBase {
 	}
 
 	@Override
-	public void execute(ProxiedPlayer player, String[] args) {
+	public void execute(Player player, String[] args) {
 		if (!Authentication.shouldAutoLogin(player)) {
-			player.sendMessage("§cLogin first.");
+			player.sendMessage(Messages.get("you-must-login-first"));
 			return;
 		}
 		
 		if (AuthDB.isPremium(player.getUniqueId())) {
-			player.sendMessage("§cYou're in premium mode!");
+			player.sendMessage(Messages.get("you-are-in-premium-mode"));
 			return;
 		}
 		
 		if (args.length < 2) {
-            player.sendMessage("§cUsage: " + getUsage());
+			player.sendMessage(Messages.get("change-password-command-usage").replaceText(builder -> builder
+					.match("%changePasswordCommandUsage%")
+					.replacement(Component.text(getUsage()))));
             return;
         }
 
@@ -57,14 +61,11 @@ public class ChangePasswordCommand extends CommandBase {
         String newPass = args[1];
 
         if (!AuthDB.checkPassword(player.getUniqueId(), oldPass)) {
-            player.sendMessage("§cWrong password!");
-            return;
+			player.sendMessage(Messages.get("incorrect-password-entered"));
+			return;
         }
         
         AuthDB.setPassword(player.getUniqueId(), newPass);
-        player.sendMessage("§aChanged your password!");
+		player.sendMessage(Messages.get("you-can-change-your-password"));
 	}
 }
-
-
-// on /premium if player switches to non premium and isn't registered tell it to register and warn him. (note so that I don't forget cuz I'm a dumbfuck)

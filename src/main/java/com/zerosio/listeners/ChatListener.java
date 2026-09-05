@@ -1,5 +1,11 @@
 package com.zerosio.listeners;
 
+import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.player.PlayerChatEvent;
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Config;
+import com.zerosio.Core;
+import com.zerosio.Messages;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.chat.ChatModes;
 import com.zerosio.commands.punishments.PunishmentDomains;
@@ -8,31 +14,28 @@ import com.zerosio.database.User;
 import com.zerosio.guilds.Guild;
 import com.zerosio.party.database.PartyDB;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.event.ChatEvent;
-import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.event.EventHandler;
+import net.kyori.adventure.text.Component;
 import org.bson.Document;
 
-public class ChatListener implements Listener {
+import java.util.List;
 
-    @EventHandler
-    public void onChat(ChatEvent event) {
-        if (!(event.getSender() instanceof ProxiedPlayer))
-            return;
+public class ChatListener {
 
-        ProxiedPlayer player = (ProxiedPlayer) event.getSender();
+    @Subscribe
+    public void onChat(PlayerChatEvent playerChatEvent) {
+        Player player = playerChatEvent.getPlayer();
         User user = User.getUser(player.getUniqueId());
+
         ChatModes userChatMode = user.getChatMode();
         
         if (userChatMode == null) {
         	userChatMode = ChatModes.PUBLIC;
         }
-        
+
+        String message = playerChatEvent.getMessage();
+
         if (player != null && CoreAPI.getPlayerRank(player.getUniqueId()).isAboveOrEqual(Rank.MVP_PLUS_PLUS)) {
-            event.setMessage(event.getMessage()
-                    .replace("<3", "§c❤")
+            message = message.replace("<3", "§c❤")
                     .replace("⭐", "§6✭")
                     .replace(":owo:", "§dO§5w§dO")
                     .replace("o/", "§d(/◕ヮ◕)/")
@@ -43,48 +46,48 @@ public class ChatListener implements Listener {
                     .replace(":no:", "§c✖")
                     .replace(":java:", "§b♨")
                     .replace(":arrow:", "§e➡")
-                    .replace(":typing:", "§e✎§6..."));
+                    .replace(":typing:", "§e✎§6...");
         }
         
         if (userChatMode == ChatModes.GUILD) {
         	if(!Guild.inGuild(player)) {
-        		player.sendMessage("§eYour chat mode has been set to §2ALL §ebecause you are currently not in a Guild.");
+                player.sendMessage(Messages.get("chat-switched-to-all-from-guild"));
         		user.setChatMode(ChatModes.PUBLIC);
-        		event.setCancelled(true);
-        		return;
+                playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+                return;
         	}
-        	
-        	ProxyServer.getInstance().getPluginManager().dispatchCommand(player, "gc " + event.getMessage());
-        	event.setCancelled(true);
-        	return;
+
+            Core.getInstance().getProxy().getCommandManager().executeAsync(player, "gc " + playerChatEvent.getMessage());
+            playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+            return;
         }
         
         if (userChatMode == ChatModes.PARTY) {
         	if (!PartyDB.isInParty(player.getUniqueId())) {
-        		player.sendMessage("§eYour chat mode has been set to §2ALL §ebecause you are currently not in a Party.");
+                player.sendMessage(Messages.get("chat-switched-to-all-from-party"));
         		user.setChatMode(ChatModes.PUBLIC);
-        		event.setCancelled(true);
-        		return;
+                playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+                return;
         	}
-        	
-        	ProxyServer.getInstance().getPluginManager().dispatchCommand(player, "pc " + event.getMessage());
-        	event.setCancelled(true);
-        	return;
+
+            Core.getInstance().getProxy().getCommandManager().executeAsync(player, "pc " + playerChatEvent.getMessage());
+            playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+            return;
         }
         
         if (userChatMode == ChatModes.MESSAGE) {
-        	ProxiedPlayer dming = CoreAPI.getProxyPlayer(user.getCurrentlyMessaging());
+        	Player dming = CoreAPI.getProxyPlayer(user.getCurrentlyMessaging());
         	
-        	if (dming == null || !dming.isConnected()) {
-        		player.sendMessage("§eYour chat mode has been set to §2ALL §ethe person you were messaging has went offline.");
+        	if (dming == null || !dming.isActive()) {
+                player.sendMessage(Messages.get("messaging-player-went-offline"));
         		user.setChatMode(ChatModes.PUBLIC);
-        		event.setCancelled(true);
-        		return;
+                playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+                return;
         	}
-        	
-        	ProxyServer.getInstance().getPluginManager().dispatchCommand(player, "msg " + dming.getName() + " " + event.getMessage());
-        	event.setCancelled(true);
-        	return;
+
+            Core.getInstance().getProxy().getCommandManager().executeAsync(player, "msg " + playerChatEvent.getMessage());
+            playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+            return;
         }
 
         if (Punishment.isMuted(player.getUniqueId())) {
@@ -94,31 +97,25 @@ public class ChatListener implements Listener {
                 String id = mute.getString("id");
                 long length = mute.getLong("length");
                 long timestamp = mute.getLong("timestamp");
+                List<String> messages;
+                String remaining = "";
 
-                if (length != -1) {
-                    long expiry = timestamp + (length * 1000L);
-                    long timeLeft = (expiry - System.currentTimeMillis()) / 1000L;
-                    if (timeLeft <= 0) {
-                        Punishment.unmute(player.getUniqueId());
-                        return;
-                    }
-                    player.sendMessage("§c§l§m---------------------------------------------");
-                    player.sendMessage("§cYou are currently muted for: " + reason);
-                    player.sendMessage("§7Your mute will expire in §c" + calculateTime(timeLeft));
-                    player.sendMessage("§7Find out more here: §e" + PunishmentDomains.MUTE);
-                    player.sendMessage("§7Mute ID: §f#" + id);
-                    player.sendMessage("§c§l§m---------------------------------------------");
-                    event.setCancelled(true);
-                    return;
+                if (length == -1) {
+                    messages = Config.getStringList("server.punishment-messages.permanently-muted");
                 } else {
-                    player.sendMessage("§c§l§m---------------------------------------------");
-                    player.sendMessage("§cYou are permanently muted for: " + reason);
-                    player.sendMessage("§7Find out more here: §e" + PunishmentDomains.MUTE);
-                    player.sendMessage("§7Mute ID: §f#" + id);
-                    player.sendMessage("§c§l§m---------------------------------------------");
-                    event.setCancelled(true);
-                    return;
+                    long expiry = timestamp + (length * 1000L);
+                    remaining = calculateTime((expiry - System.currentTimeMillis() / 1000L));
+                    messages = Config.getStringList("server.punishment-messages.temporarily-muted");
                 }
+
+                String msg = String.join("\n", messages).replace("%punishmentReason%", reason)
+                        .replace("%punishmentId%", id)
+                        .replace("%punishmentUrl%", PunishmentDomains.MUTE)
+                        .replace("%remainingPunishmentTime%", remaining);
+
+                player.sendMessage(Component.text(msg));
+                playerChatEvent.setResult(PlayerChatEvent.ChatResult.denied());
+                return;
             }
         }
     }

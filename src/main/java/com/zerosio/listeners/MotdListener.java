@@ -1,53 +1,66 @@
 package com.zerosio.listeners;
 
+import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ProxyPingEvent;
+import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.server.ServerPing;
 import com.zerosio.Config;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ServerPing;
-import net.md_5.bungee.api.connection.PendingConnection;
-import net.md_5.bungee.api.event.ProxyPingEvent;
-import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.api.plugin.Plugin;
-import net.md_5.bungee.event.EventHandler;
+import com.zerosio.Messages;
+import net.kyori.adventure.text.Component;
 
-public class MotdListener implements Listener {
+public class MotdListener {
 
-    private final Plugin plugin;
+    private final ProxyServer proxyServer;
 
-    public MotdListener(Plugin plugin) {
-        this.plugin = plugin;
+    public MotdListener(ProxyServer proxyServer) {
+        this.proxyServer = proxyServer;
     }
 
     public void refresh() {
         Config.reload();
-        plugin.getLogger().info("MOTD config reloaded.");
     }
 
-    @EventHandler
-    public void onPing(ProxyPingEvent event) {
-        ServerPing ping = event.getResponse();
-        PendingConnection connection = event.getConnection();
+    @Subscribe
+    public void onPing(ProxyPingEvent proxyPingEvent) {
+        ServerPing ping = proxyPingEvent.getPing();
 
         boolean maintenance = Config.getBoolean("maintenance", false);
 
         if (maintenance) {
-            String line1 = ChatColor.translateAlternateColorCodes('&',
-                    "              &aAscent Network &c[1.8-1.20]");
-            String line2 = ChatColor.translateAlternateColorCodes('&',
-                    "   &cThe network is currently undergoing maintenance.");
-            ping.setDescription(line1 + "\n" + line2);
-            ping.setPlayers(new ServerPing.Players(0, 0, new ServerPing.PlayerInfo[0]));
-            ping.setVersion(new ServerPing.Protocol("§cMaintenance", -1));
-        } else {
-            String line1 = ChatColor.translateAlternateColorCodes('&',
-                    "&r&r                 &aAscent Network &c[1.8-1.20]&r&r");
-            String line2 = ChatColor.translateAlternateColorCodes('&',
-                    "&r&r                      &2&lRELEASE");
-            ping.setDescription(line1 + "\n" + line2);
-            ping.setPlayers(
-                    new ServerPing.Players(1500, plugin.getProxy().getOnlineCount(), ping.getPlayers().getSample()));
-            ping.setVersion(new ServerPing.Protocol("Requires MC 1.8 / 1.20.3", ping.getVersion().getProtocol()));
-        }
+            Component line1 = Messages.get("motd.maintenance.line-one");
+            Component line2 = Messages.get("motd.maintenance.line-two");
+            int onlinePlayers = Integer.parseInt(Config.getString("server.motd.maintenance.online-players", "0"));
+            int maximumPlayers = Integer.parseInt(Config.getString("server.motd.maintenance.maximum-players", "0"));
+            int version = Integer.parseInt(Config.getString("server.motd.maintenance.protocol-version", "0"));
+            String motdName = Config.getString("server.motd.maintenance.protocol-name", "Maintenance");
 
-        event.setResponse(ping);
+            ping = ping.asBuilder()
+                    .description(Component.text()
+                            .append(line1)
+                            .append(Component.newline())
+                            .append(line2)
+                            .build())
+                    .onlinePlayers(onlinePlayers)
+                    .maximumPlayers(maximumPlayers)
+                    .version(new ServerPing.Version(version, motdName))
+                    .build();
+        } else {
+            Component line1 = Messages.get("motd.released.line-one");
+            Component line2 = Messages.get("motd.released.line-two");
+            int maximumPlayers = Integer.parseInt(Config.getString("server.motd.released.maximum-players", "0"));
+            String motdName = Config.getString("server.motd.released.protocol-name", "Requires MC 1.8 / 1.20.3");
+
+            ping = ping.asBuilder()
+                    .description(Component.text()
+                            .append(line1)
+                            .append(Component.newline())
+                            .append(line2)
+                            .build())
+                    .onlinePlayers(proxyServer.getPlayerCount())
+                    .maximumPlayers(maximumPlayers)
+                    .version(new ServerPing.Version(ping.getVersion().getProtocol(), motdName))
+                    .build();
+        }
+        proxyPingEvent.setPing(ping);
     }
 }

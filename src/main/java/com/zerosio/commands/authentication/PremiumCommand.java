@@ -1,12 +1,12 @@
 package com.zerosio.commands.authentication;
 
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Messages;
 import com.zerosio.authentication.AuthDB;
 import com.zerosio.commands.impl.CommandBase;
 import com.zerosio.database.User;
 import com.zerosio.rank.Rank;
 import com.zerosio.utility.PremiumUtil;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,25 +39,25 @@ public class PremiumCommand extends CommandBase {
 	}
 
 	@Override
-	public void execute(ProxiedPlayer player, String[] args) {
+	public void execute(Player player, String[] args) {
 		
 		boolean premiumMode = AuthDB.isPremium(player.getUniqueId());
 		
 		if (!PremiumUtil.isPremium(player)) {
-			player.sendMessage("§cYou need to have a premium account to use this command!");
+			player.sendMessage(Messages.get("must-be-a-premium-account"));
 			return;
 		}
 
 		if (premiumMode) {
 			
 			AuthDB.setPremium(player.getUniqueId(), false);
-			player.sendMessage("§ePlayer mode has been §aenabled§e.");
+			player.sendMessage(Messages.get("premium-mode-enabled"));
 			return;
 		} else if (!premiumMode) {
 			AuthDB.setPremium(player.getUniqueId(), true);
-			player.sendMessage("§ePlayer mode has been §cdisabled§e.");
+			player.sendMessage(Messages.get("premium-mode-disabled"));
 			if (!AuthDB.isRegistered(player.getUniqueId())) {
-				player.sendMessage("§e§lWARNING §r§eRegister your account using '/register <password> <confirm password>' because your account isn't registered yet!");
+				player.sendMessage(Messages.get("your-account-is-not-registered-yet"));
 			}
 			return;
 		}

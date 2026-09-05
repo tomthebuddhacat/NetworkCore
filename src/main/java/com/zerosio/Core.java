@@ -59,7 +59,7 @@ public class Core {
 		Guild.register();
 		GuildDatabase.ensureCollectionn();
 
-		motdListener = new MotdListener(this);
+		motdListener = new MotdListener(proxyServer);
 		registerListeners();
 
 		CommandManager.registerCommands(this);
@@ -92,7 +92,7 @@ public class Core {
 	}
 
 	private void registerListeners() {
-		proxyServer.getEventManager().register(this, new PlayerListener());
+		proxyServer.getEventManager().register(this, new PlayerListener(proxyServer));
 		proxyServer.getEventManager().register(this, new ChatListener());
 		proxyServer.getEventManager().register(this, motdListener);
 		proxyServer.getEventManager().register(this, new AuthListener());

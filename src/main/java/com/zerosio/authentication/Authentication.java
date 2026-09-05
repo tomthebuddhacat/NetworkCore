@@ -1,24 +1,22 @@
 package com.zerosio.authentication;
 
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.Title;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.config.ServerInfo;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.event.ServerConnectEvent;
-import net.md_5.bungee.api.scheduler.ScheduledTask;
+import com.velocitypowered.api.event.player.ServerConnectedEvent;
+import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.proxy.server.ServerInfo;
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.zerosio.Core;
+import com.zerosio.Messages;
 import com.zerosio.api.ControllerAPI;
 import com.zerosio.api.CoreAPI;
 import com.zerosio.database.User;
 import com.zerosio.friends.database.FriendsDB;
 import com.zerosio.guilds.Guild;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.title.Title;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -30,48 +28,43 @@ public class Authentication {
 	private static final Map<UUID, ScheduledTask> loginTimeouts = new HashMap<>();
 	private static final Map<UUID, String> authenticatedIPs = new HashMap<>();
 
-	public static void register(ServerConnectEvent event) {
-		ProxiedPlayer player = event.getPlayer();
+	public static void register(Player player) {
 		UUID uuid = player.getUniqueId();
 		ServerInfo limbo = ControllerAPI.getRandomAvailableInstanceServerInfo("limbo");
 		cancelRegisterTask(uuid);
 
-		event.setTarget(limbo);
+		Core.getInstance().getProxy().getServer(limbo.getName()).ifPresent(registeredServer -> player.createConnectionRequest(registeredServer).connect());
 
-		sendTitle(player,
-				  ChatColor.RED + "Register!",
-				  ChatColor.YELLOW + "/register <password> <password>");
+		sendTitle(player, Component.text("Register!", NamedTextColor.RED), Component.text("/register <password> <password>", NamedTextColor.YELLOW));
 
-		ScheduledTask task = ProxyServer.getInstance().getScheduler().schedule(
-								 Core.getInstance(),
-		() -> {
-			if (!player.isConnected()) {
-				cancelRegisterTask(uuid);
-				return;
-			}
-			player.sendMessage(new TextComponent("§ePlease enter §6/register <password> <confirm password>"));
-		},
-		0L, 2L, TimeUnit.SECONDS
-							 );
+		ScheduledTask scheduledTask = Core.getInstance().getProxy().getScheduler()
+						.buildTask(Core.getInstance(), () -> {
+							if (!player.isActive()) {
+								cancelRegisterTask(uuid);
+								return;
+							}
+							player.sendMessage(Component.text("Please enter ", NamedTextColor.YELLOW)
+									.append(Component.text("/register <password> <confirm password>", NamedTextColor.GOLD)));
+						})
+								.repeat(2, TimeUnit.SECONDS)
+				                .schedule();
 
-		registerTasks.put(uuid, task);
+		registerTasks.put(uuid, scheduledTask);
 
-		// 30-second kick timer
-		ScheduledTask timeout = ProxyServer.getInstance().getScheduler().schedule(
-									Core.getInstance(),
-		() -> {
-			if (player.isConnected()) {
-				player.disconnect(new TextComponent("§cYou took too long to register!"));
-				cancelRegisterTask(uuid);
-			}
-		},
-		30, TimeUnit.SECONDS
-								);
+		ScheduledTask scheduledTask1 = Core.getInstance().getProxy().getScheduler()
+				.buildTask(Core.getInstance(), () -> {
+					if (player.isActive()) {
+						player.disconnect(Component.text("You took too long to register!", NamedTextColor.RED));
+					}
+					cancelRegisterTask(uuid);
+				})
+				.delay(30, TimeUnit.SECONDS)
+				.schedule();
 
-		registerTimeouts.put(uuid, timeout);
+		registerTimeouts.put(uuid, scheduledTask1);
 	}
 
-	public static void stopRegisterTask(ProxiedPlayer player) {
+	public static void stopRegisterTask(Player player) {
 		UUID uuid = player.getUniqueId();
 		ServerInfo lobby = ControllerAPI.getRandomAvailableInstanceServerInfo("lobby");
 		User user = User.getUser(uuid);
@@ -80,22 +73,21 @@ public class Authentication {
 		clearTitle(player);
 		storeAuthenticatedIP(player);
 
-		player.sendMessage(new TextComponent("§aSuccessfully registered."));
-		player.sendMessage(new TextComponent("§aTransporting you to the Main Lobby..."));
+		player.sendMessage(Component.text("Successfully registered."));
+		player.sendMessage(Component.text("Transporting you to the Main Lobby..."));
 
-		player.connect(lobby);
+		Core.getInstance().getProxy().getServer(lobby.getName()).ifPresent(registeredServer -> player.createConnectionRequest(registeredServer).connect());
 
-		user.setData("last_known_name", player.getName());
+		user.setData("last_known_name", player.getUsername());
 		user.setData("last_login", System.currentTimeMillis());
 		AuthDB.setLastSessionValidation(uuid, Instant.now().toEpochMilli());
 
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
-			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			Player friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
 			User friendUser = User.getUser(friendId);
-			if (friend != null && friend.isConnected()) {
-				
+			if (friend != null ) {
 				if (friendUser.getBoolean("friend.join_leave_msg")) {
-					friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §ejoined.");
+					friend.sendMessage(Messages.get("friend-join-message", Map.of("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix(), "playerName", player.getUsername())));
 				}
 			}
 			
@@ -105,22 +97,27 @@ public class Authentication {
 		}
 
 		if (CoreAPI.getPlayerRank(player.getUniqueId()).isStaff()) {
-			for (ProxiedPlayer poo : ProxyServer.getInstance().getPlayers()) {
+			for (Player poo : Core.getInstance().getProxy().getAllPlayers()) {
 				if (CoreAPI.getPlayerRank(poo.getUniqueId()).isStaff()) {
-					poo.sendMessage(CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + player.getName() + " §econnected.");
+					poo.sendMessage(Messages.get("staff-join-message", Map.of("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix(), "playerName", player.getUsername())));
 				}
 			}
 		}
 
 		Guild guild = Guild.getGuildFromPlayer(player);
 		if (guild != null) {
-			String playerName = player.getName();
+			String playerName = player.getUsername();
 			String guildTagColor = guild.getTagColor();
 			String guildTag = guild.getTag().isEmpty() ? "" : "[" + guild.getTag() + "] ";
+			Map<String, String> messagePlaceholders = new HashMap<>();
+			messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix());
+			messagePlaceholders.put("playerName", playerName);
+			messagePlaceholders.put("guildTagColor", guildTagColor);
+			messagePlaceholders.put("guildTag", guildTag);
 
-			for (ProxiedPlayer poop : guild.getOnlinePlayers()) {
+			for (Player poop : guild.getOnlinePlayers()) {
 				if (!poop.equals(player)) {
-					poop.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §ejoined.");
+					poop.sendMessage(Messages.get("guild-join-message", messagePlaceholders));
 				}
 			}
 			
@@ -128,48 +125,41 @@ public class Authentication {
 		}
 	}
 
-	public static void login(ServerConnectEvent event) {
-		ProxiedPlayer player = event.getPlayer();
+	public static void login(Player player) {
 		UUID uuid = player.getUniqueId();
 		ServerInfo limbo = ControllerAPI.getRandomAvailableInstanceServerInfo("limbo");
 		cancelLoginTask(uuid);
 
-		event.setTarget(limbo);
+		Core.getInstance().getProxy().getServer(limbo.getName()).ifPresent(server -> player.createConnectionRequest(server).connect());
 
-		sendTitle(player,
-				  ChatColor.GREEN + "Login!",
-				  ChatColor.YELLOW + "/login <password>");
+		sendTitle(player, Component.text("Login!", NamedTextColor.GREEN), Component.text("/login <password>", NamedTextColor.YELLOW));
 
-		ScheduledTask task = ProxyServer.getInstance().getScheduler().schedule(
-								 Core.getInstance(),
-		() -> {
-			if (!player.isConnected()) {
-				cancelLoginTask(uuid);
-				return;
-			}
-			player.sendMessage(new TextComponent("§ePlease enter §a/login <password>"));
-		},
-		0L, 2L, TimeUnit.SECONDS
-							 );
+		ScheduledTask scheduledTask = Core.getInstance().getProxy().getScheduler()
+				.buildTask(Core.getInstance(), () -> {
+					if (!player.isActive()) {
+						cancelLoginTask(uuid);
+						return;
+					}
 
-		loginTasks.put(uuid, task);
+					player.sendMessage(Component.text("Please enter ", NamedTextColor.YELLOW)
+							.append(Component.text("/login <password>", NamedTextColor.GREEN)));
+				})
+				.repeat(2, TimeUnit.SECONDS)
+				.schedule();
+		loginTasks.put(uuid, scheduledTask);
 
-		// 30-second kick timer
-		ScheduledTask timeout = ProxyServer.getInstance().getScheduler().schedule(
-									Core.getInstance(),
-		() -> {
-			if (player.isConnected()) {
-				player.disconnect(new TextComponent("§cYou took too long to login!"));
-				cancelLoginTask(uuid);
-			}
-		},
-		30, TimeUnit.SECONDS
-								);
-
-		loginTimeouts.put(uuid, timeout);
+		ScheduledTask scheduledTask1 = Core.getInstance().getProxy().getScheduler()
+				.buildTask(Core.getInstance(), () -> {
+					if (player.isActive()) {
+						player.disconnect(Component.text("You took too login!", NamedTextColor.RED));
+					}
+					cancelLoginTask(uuid);
+				})
+				.delay(30, TimeUnit.SECONDS)
+				.schedule();
 	}
 
-	public static void stopLoginTask(ProxiedPlayer player) {
+	public static void stopLoginTask(Player player) {
 		UUID uuid = player.getUniqueId();
 		ServerInfo lobby = ControllerAPI.getRandomAvailableInstanceServerInfo("lobby");
 		User user = User.getUser(uuid);
@@ -178,21 +168,21 @@ public class Authentication {
 		clearTitle(player);
 		storeAuthenticatedIP(player);
 
-		player.sendMessage(new TextComponent("§aSuccessfully logged in."));
-		player.sendMessage(new TextComponent("§aTransporting you to the Main Lobby..."));
+		player.sendMessage(Component.text("§aSuccessfully logged in."));
+		player.sendMessage(Component.text("§aTransporting you to the Main Lobby..."));
 
-		player.connect(lobby);
+		Core.getInstance().getProxy().getServer(lobby.getName()).ifPresent(registeredServer -> player.createConnectionRequest(registeredServer).connect());
 
-		user.setData("last_known_name", player.getName());
+		user.setData("last_known_name", player.getUsername());
 		user.setData("last_login", System.currentTimeMillis());
 		AuthDB.setLastSessionValidation(uuid, Instant.now().toEpochMilli());
 
 		for (UUID friendId : FriendsDB.getFriends(uuid)) {
-			ProxiedPlayer friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
+			Player friend = CoreAPI.getProxyPlayerUsingUUID(friendId);
 			User friendUser = User.getUser(friendId);
-			if (friend != null && friend.isConnected()) {
+			if (friend != null) {
 				if (friendUser.getBoolean("friend.join_leave_msg")) {
-					friend.sendMessage("§aFriend > " + CoreAPI.getPlayerRank(uuid).getPrefix() + player.getName() + " §ejoined.");
+					friend.sendMessage(Messages.get("friend-join-message", Map.of("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix(), "playerName", player.getUsername())));
 				}
 			}
 			
@@ -202,22 +192,27 @@ public class Authentication {
 		}
 
 		if (CoreAPI.getPlayerRank(player.getUniqueId()).isStaff()) {
-			for (ProxiedPlayer poo : ProxyServer.getInstance().getPlayers()) {
+			for (Player poo : Core.getInstance().getProxy().getAllPlayers()) {
 				if (CoreAPI.getPlayerRank(poo.getUniqueId()).isStaff()) {
-					poo.sendMessage(CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + player.getName() + " §econnected.");
+					poo.sendMessage(Messages.get("staff-join-message", Map.of("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix(), "playerName", player.getUsername())));
 				}
 			}
 		}
 
 		Guild guild = Guild.getGuildFromPlayer(player);
 		if (guild != null) {
-			String playerName = player.getName();
+			String playerName = player.getUsername();
 			String guildTagColor = guild.getTagColor();
 			String guildTag = guild.getTag().isEmpty() ? "" : "[" + guild.getTag() + "] ";
+			Map<String, String> messagePlaceholders = new HashMap<>();
+			messagePlaceholders.put("playerRank", CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix());
+			messagePlaceholders.put("playerName", playerName);
+			messagePlaceholders.put("guildTagColor", guildTagColor);
+			messagePlaceholders.put("guildTag", guildTag);
 
-			for (ProxiedPlayer poop : guild.getOnlinePlayers()) {
+			for (Player poop : guild.getOnlinePlayers()) {
 				if (!poop.equals(player)) {
-					poop.sendMessage("§" + guildTagColor + guildTag + CoreAPI.getPlayerRank(player.getUniqueId()).getPrefix() + playerName + " §ejoined.");
+					poop.sendMessage(Messages.get("guild-join-message", messagePlaceholders));
 				}
 			}
 			
@@ -225,7 +220,7 @@ public class Authentication {
 		}
 	}
 
-	public static boolean shouldAutoLogin(ProxiedPlayer player) {
+	public static boolean shouldAutoLogin(Player player) {
 		User user = User.getUser(player.getUniqueId());
 		if (user == null) return false;
 
@@ -236,15 +231,15 @@ public class Authentication {
 		return isIPAuthenticated(player);
 	}
 
-	public static void storeAuthenticatedIP(ProxiedPlayer player) {
+	public static void storeAuthenticatedIP(Player player) {
 		UUID uuid = player.getUniqueId();
-		String ip = player.getAddress().getAddress().getHostAddress();
+		String ip = player.getRemoteAddress().getAddress().getHostAddress();
 		authenticatedIPs.put(uuid, ip);
 	}
 
-	public static boolean isIPAuthenticated(ProxiedPlayer player) {
+	public static boolean isIPAuthenticated(Player player) {
 		UUID uuid = player.getUniqueId();
-		String currentIP = player.getAddress().getAddress().getHostAddress();
+		String currentIP = player.getRemoteAddress().getAddress().getHostAddress();
 		String storedIP = authenticatedIPs.get(uuid);
 
 		return storedIP != null && storedIP.equals(currentIP);
@@ -266,19 +261,13 @@ public class Authentication {
 		if (timeout != null) timeout.cancel();
 	}
 
-	private static void sendTitle(ProxiedPlayer player, String title, String subtitle) {
-		Title t = ProxyServer.getInstance().createTitle();
-		t.title(new TextComponent(title));
-		t.subTitle(new TextComponent(subtitle));
-		t.fadeIn(10);
-		t.stay(800);
-		t.fadeOut(0);
-		t.send(player);
+	private static void sendTitle(Player player, Component title, Component subtitle) {
+		player.showTitle(Title.title(title, subtitle,
+				Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(4000), Duration.ofMillis(0))
+		));
 	}
 
-	private static void clearTitle(ProxiedPlayer player) {
-		Title t = ProxyServer.getInstance().createTitle();
-		t.reset();
-		t.send(player);
+	private static void clearTitle(Player player) {
+		player.clearTitle();
 	}
 }

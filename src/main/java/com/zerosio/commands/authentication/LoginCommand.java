@@ -1,10 +1,12 @@
 package com.zerosio.commands.authentication;
 
+import com.velocitypowered.api.proxy.Player;
+import com.zerosio.Messages;
 import com.zerosio.authentication.AuthDB;
 import com.zerosio.authentication.Authentication;
 import com.zerosio.commands.impl.CommandBase;
 import com.zerosio.rank.Rank;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.kyori.adventure.text.Component;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,27 +39,29 @@ public class LoginCommand extends CommandBase {
 	}
 
 	@Override
-	public void execute(ProxiedPlayer player, String[] args) {
+	public void execute(Player player, String[] args) {
 		if (Authentication.shouldAutoLogin(player)) {
-			player.sendMessage("§cYou are already logged in.");
+			player.sendMessage(Messages.get("you-are-already-logged-in"));
 			return;
 		}
 		
 		if (AuthDB.isPremium(player.getUniqueId())) {
-			player.sendMessage("§cYour current session is in premium mode!");
+			player.sendMessage(Messages.get("premium-mode-session"));
 			return;
 		}
 		
 		if (args.length < 1) {
-            player.sendMessage("§cUsage: " + getUsage());
+			player.sendMessage(Messages.get("login-command-usage").replaceText(builder -> builder
+					.match("%loginCommandUsage%")
+					.replacement(Component.text(getUsage()))));
             return;
         }
         
         String password = args[0];
         
         if (!AuthDB.checkPassword(player.getUniqueId(), password)) {
-            player.sendMessage("§cThis password does not match our records!");
-        } else {
+			player.sendMessage(Messages.get("invalid-password-entered-please-check-again"));
+		} else {
         	Authentication.stopLoginTask(player);
         }
 	}

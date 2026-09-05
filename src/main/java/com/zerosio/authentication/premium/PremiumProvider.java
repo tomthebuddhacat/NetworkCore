@@ -60,13 +60,9 @@ public class PremiumProvider {
                         } else if (e.getIssue() == PremiumException.Issue.SERVER_EXCEPTION) {
                             throw new RuntimeException("Server exception while fetching premium user " + finalName, e);
                         } else if (e.getIssue() == PremiumException.Issue.THROTTLED) {
-                            Core.getInstance().getLogger().warning(
-                                    "Got throttled while fetching premium user. Falling back to an alternative API. Player's information might not be up-to-date."
-                            );
+                            System.err.println("Got throttled while fetching premium user. Falling back to an alternative API. Player's information might not be up-to-date.");
                         } else {
-                            Core.getInstance().getLogger().warning(
-                                    "Got undefined exception while fetching premium user. Falling back to an alternative API. Player's information might not be up-to-date."
-                            );
+                            System.err.println( "Got undefined exception while fetching premium user. Falling back to an alternative API. Player's information might not be up-to-date.");
                         }
                     } catch (RuntimeException e) {
                         e.printStackTrace(System.err);

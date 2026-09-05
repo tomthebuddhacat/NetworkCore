@@ -2,6 +2,8 @@ package com.zerosio.api;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
@@ -16,6 +18,18 @@ public class ControllerAPI {
 	public static ServerInfo getRandomAvailableInstanceServerInfo(String template) {
 		return Core.getInstance().getProxy().getServer(getRandomAvailableInstance(template).getName())
 				.map(RegisteredServer::getServerInfo).orElse(null);
+	}
+
+	public static RegisteredServer getRandomAvailableInstanceServer(String type) {
+		List<RegisteredServer> registeredServers = Core.getInstance().getProxy().getAllServers().stream()
+				.filter(registeredServer -> registeredServer.getServerInfo().getName().startsWith(type))
+				.collect(Collectors.toList());
+
+		if (registeredServers.isEmpty()) {
+			return null;
+		}
+
+		return registeredServers.get(ThreadLocalRandom.current().nextInt(registeredServers.size()));
 	}
 	
 	public static AvailableInstance getRandomAvailableInstance(String template) {

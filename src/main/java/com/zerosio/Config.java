@@ -4,10 +4,12 @@ import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.serialize.SerializationException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public class Config {
 
@@ -57,6 +59,14 @@ public class Config {
 
     public static String getString(String path, String def) {
         return node(path).getString(def);
+    }
+
+    public static List<String> getStringList(String path) {
+        try {
+            return node(path).getList(String.class);
+        } catch (SerializationException serializationException) {
+            throw new RuntimeException("Failed to set config value: " + path, serializationException);
+        }
     }
 
     public static boolean getBoolean(String path, boolean def) {
